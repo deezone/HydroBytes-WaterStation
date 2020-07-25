@@ -17,7 +17,12 @@ This repo is for the Water Management systems of the project. It's responsabliti
 - send status and related readings to the Central System (Big Brother)
 
 
-### Resources
-- [ESP8266 Web Server Step-By-Step Using Arduino IDE (Mac OSX and Windows)](https://www.youtube.com/watch?v=m2fEXhl70OY)
+### Release Notes
+Resources and thougbts on each release. Development details as well as links to help explain choices made in how the system was built.
+- [v0.0.1](https://github.com/deezone/HydroBytes-waterManagement/blob/master/resources/releases/v00-00-01.md)
 
-**Note**: The naming of the systems is in reference to the novel **[1984](https://en.wikipedia.org/wiki/Nineteen_Eighty-Four)** *by George Orwell*. If you've not read it you should. It's a classic that any self sufficent, automated garden loving nerd would enjoy.
+
+**Note**: The naming of the systems is in reference to the novel **[1984](https://en.wikipedia.org/wiki/Nineteen_Eighty-Four)** *by George Orwell*. If you've not read it, you should! It's a classic that any self sufficent, automated garden loving nerd would enjoy.
+
+The system names come from the [Ministries of Nineteen Eighty-Four](
+https://en.wikipedia.org/wiki/Ministries_of_Nineteen_Eighty-Four).
