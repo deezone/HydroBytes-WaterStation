@@ -35,7 +35,7 @@ void setup() {
   IPAddress stationIP = WiFi.softAPIP();
   Serial.println("AP (station) IP address: " + stationIP);
 
-  Serial.println((String)"Local IP address: " + WiFi.localIP());
+  Serial.println("Local IP address: " + WiFi.localIP());
 
   // define routes
   server.on("/", handleRoot);
