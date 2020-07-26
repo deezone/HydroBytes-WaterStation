@@ -14,6 +14,7 @@
 const char *ssid = APSSID;
 const char *password = APPSK;
 
+// Instantiate 
 ESP8266WebServer server(80);
 
 /**
@@ -21,7 +22,7 @@ ESP8266WebServer server(80);
  */
 void setup() {
   delay(1000);
-  Serial.begin(115200);
+  Serial.begin(115200); // Test at 9600 as UNO might need slower serial rate
 
   Serial.println();
   Serial.print("Configuring access point...");
@@ -32,11 +33,13 @@ void setup() {
   WiFi.softAP(ssid);
 
   IPAddress stationIP = WiFi.softAPIP();
-  Serial.print("AP IP address: ");
-  Serial.println(stationIP);
+  Serial.println("AP (station) IP address: " + stationIP);
+
+  Serial.println((String)"Local IP address: " + WiFi.localIP());
 
   // define routes
   server.on("/", handleRoot);
+  // server.on("/", [](){server.send(200, "text/plain", "Hello World");
   
   server.begin();
   Serial.println("HTTP server started");
