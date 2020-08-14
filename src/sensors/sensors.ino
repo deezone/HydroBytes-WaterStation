@@ -1,15 +1,20 @@
 #include <SoftwareSerial.h>
-SoftwareSerial mySerial(2,3);
+SoftwareSerial serverSerial(10, 11);
+
+uint8_t pin_led = 12;
 
 /**
  * setup()
  */
 void setup() {
-  Serial.begin(115200);
-  mySerial.begin(115200);
+  Serial.begin(9600);
+  Serial.println("HydroBites Water Station (Sensors) serial connection started...");
+  delay(1000);
+
+  Serial.println("HydroBites Water Station (Sensors <-> Server) serial connection started...");
+  serverSerial.begin(9600);
   
-  Serial.println("Hello World (Sensors)");
-  delay(5000);
+  Serial.println("HydroBites Water Station (Sensors) setup complete...");
 }
 
 /**
@@ -19,18 +24,11 @@ void loop() {
   String incomingString="";
   boolean stringReady = false;
 
-  /**
-   * Read incoming serial communication from server (esp8266-esp-01)
-   */
-  while(mySerial.available()) {
-    incomingString = mySerial.readString();
-    stringReady = true;
-  }
+  // Send test "PONG"
+  serverSerial.println("Sensor PONG");
 
-  /**
-   * Respond and send requests to server (esp8266-esp-01)
-   */
-  if(stringReady) {
-    Serial.println("Uno (sensors) received from ESP (server): " + incomingString);
+  while(serverSerial.available()) {
+    incomingString = serverSerial.readStringUntil('\n');
+    Serial.println((String)"from server: " + incomingString);
   }
 }
