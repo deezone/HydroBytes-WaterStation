@@ -19,7 +19,10 @@ This repo is for the Water Management systems of the project. It's responsabliti
 
 ### Release Notes
 Resources and thougbts on each release. Development details as well as links to help explain choices made in how the system was built.
-- [v0.0.1](https://github.com/deezone/HydroBytes-waterManagement/blob/master/resources/releases/v00-00-01.md)
+- [v0.0.1 - 25 July 2020](https://github.com/deezone/HydroBytes-waterManagement/blob/master/resources/releases/v00-00-01.md)
+Functional soluton to two controllers - Ardunio Uno and ESP8266 ESP-01 communicating through a serial connetion. The ESP prodives a wifi access point and the Uno works with all of the sensors.
+- [v0.0.2 - 14 August 2020](https://github.com/deezone/HydroBytes-waterManagement/blob/master/resources/releases/v00-00-02.md)
+Adds functional two way serial communication between Ardunio Uno and ESP8266 ESP-01 as a part of a GET /status 200 response.
 
 
 **Note**: The naming of the systems is in reference to the novel **[1984](https://en.wikipedia.org/wiki/Nineteen_Eighty-Four)** *by George Orwell*. If you've not read it, you should! It's a classic that any self sufficent, automated garden loving nerd would enjoy.
