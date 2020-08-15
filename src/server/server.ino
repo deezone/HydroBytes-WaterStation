@@ -17,6 +17,8 @@ const char *password = APPSK;
 // Instantiate 
 ESP8266WebServer server(80);
 
+
+
 /**
  * Setup
  */
@@ -39,10 +41,13 @@ void setup() {
   // 4 -> soft restart (Possibly with a restart command)
   // 5 -> wake up from deep-sleep
 
-  // while(!Serial);
-  delay(1000);
+  // Wait for sensor controller to start as serial monitor is typically connected there for debugging
+  // delay() forces the logging to be in the expected order and also ensures timing of serial connection
+  // happens in the expected order
+  delay(10000);
 
-  Serial.begin(9600); // Test at 115200/9600 as UNO/ESP might need slower serial rate
+  // Connect to local serial port. Used to send messages to sensor controller
+  Serial.begin(9600);
 
   Serial.println("Configuring access point...");
   
@@ -51,6 +56,7 @@ void setup() {
    */
   Serial.print("Setting soft-AP ... ");
   WiFi.softAP(ssid) ? "Ready" : "Failed!";
+  Serial.println("");
 
   IPAddress stationIP = WiFi.softAPIP();
   Serial.println("AP (station) IP address: " + stationIP);
@@ -58,24 +64,28 @@ void setup() {
   Serial.println("Local IP address: " + WiFi.localIP());
   Serial.flush();
 
-  // define routes
-  server.on("/",    handleRoot);
+    // server routers
+  server.on("/", HTTP_GET, handleRoot);
+  server.on("/status", HTTP_GET, requestStatus);
   
   server.begin();
   Serial.println("HTTP server started");
+  Serial.flush();
 }
 
 /**
  * Event loop
  */
 void loop() {
-  String incomingString="";
+  String sensorMessage;
 
-  while(Serial.available()) {
-    incomingString = Serial.readStringUntil('\n');
-    Serial.println((String)"server received: " + incomingString);
+  // Serial messages from sensor (Uno)
+  while (Serial.available()) {
+    sensorMessage = Serial.readStringUntil('\n');
 
-    Serial.println("server -> PING");
+    if (sensorMessage.indexOf("serial_status:") >= 0) {
+      responseStatus(sensorMessage);
+    }
   }
 
   // Process http requests
@@ -90,10 +100,45 @@ void loop() {
  */
 void handleRoot() {
   // Write to serial channel to inform Ardunio (Uno) of event
-  Serial.write("/");
+  Serial.println("GET /");
 
   // JSON response of application status
-  server.send(200, "application/json", "{\n  status: ok\n}");
+  String body = "{\n";
+  body += "  \"hydrobytes-waters-station\": \"ok\"\n";
+  body += "  \"paths\": {\n";
+  body += "    \"/\": \"Welcome message\",\n";
+  body += "    \"/status\": \"Current state of subsystems\"\n";
+  body += "  }\n";
+  body += "}";
+
+  server.send(200, "application/json", body);
+}
+
+/**
+ * Status request controller
+ */
+void requestStatus() {
+  Serial.println("GET /status");
+}
+
+/**
+ * Status request response. Returns http response to server http request based on
+ * status reponse from sensor controller.
+ */
+void responseStatus(String sensorMessage) {
+  String serialStatus;
+
+  // serial_status: x
+  serialStatus = sensorMessage.substring(15, 19);
+
+  // Send response
+  if (serialStatus == "true") {
+    Serial.println("200");
+    server.send(200, "application/json", "{\n  status: {\n    two-way-serial-communicstion: " + serialStatus + "\n    }\n}");
+  } else {
+    Serial.println("503");
+    server.send(503, "application/json", "{\n  status: {\n    two-way-serial-communicstion: false\n    }\n}");
+  }
 }
 
 /**
