@@ -14,10 +14,8 @@
 const char *ssid = APSSID;
 const char *password = APPSK;
 
-// Instantiate 
+// Instantiate ESP8266WebServer class as "server"
 ESP8266WebServer server(80);
-
-
 
 /**
  * Setup
@@ -49,8 +47,13 @@ void setup() {
   // Connect to local serial port. Used to send messages to sensor controller
   Serial.begin(9600);
 
+  Serial.println("");
+  Serial.println("HydroBites Water Station - Server");
+  Serial.println("v0.0.3");
+  Serial.println("");
+
   Serial.println("Configuring access point...");
-  
+
   /* Password parameter removed to make open network.
    * WiFi.softAP(ssid, password);
    */
@@ -64,10 +67,12 @@ void setup() {
   Serial.println("Local IP address: " + WiFi.localIP());
   Serial.flush();
 
-    // server routers
+  // server routers
   server.on("/", HTTP_GET, handleRoot);
   server.on("/status", HTTP_GET, requestStatus);
-  
+  server.on("/led", HTTP_GET, requestLedStatus);
+  server.on("/led/toggle", HTTP_GET, requestLedToggle);
+
   server.begin();
   Serial.println("HTTP server started");
   Serial.flush();
@@ -85,6 +90,8 @@ void loop() {
 
     if (sensorMessage.indexOf("serial_status:") >= 0) {
       responseStatus(sensorMessage);
+    } else if (sensorMessage.indexOf("led_status:") >= 0) {
+      responseLedStatus(sensorMessage);
     }
   }
 
@@ -104,10 +111,12 @@ void handleRoot() {
 
   // JSON response of application status
   String body = "{\n";
-  body += "  \"hydrobytes-waters-station\": \"ok\"\n";
+  body += "  \"hydrobytes-water-station\": \"ok\"\n";
   body += "  \"paths\": {\n";
   body += "    \"/\": \"Welcome message\",\n";
   body += "    \"/status\": \"Current state of subsystems\"\n";
+  body += "    \"/led\": \"Current state of LED - On/Off\"\n";
+  body += "    \"/led/toggle\": \"Toggle LED On/Off\"\n";
   body += "  }\n";
   body += "}";
 
@@ -134,10 +143,44 @@ void responseStatus(String sensorMessage) {
   // Send response
   if (serialStatus == "true") {
     Serial.println("200");
-    server.send(200, "application/json", "{\n  status: {\n    two-way-serial-communicstion: " + serialStatus + "\n    }\n}");
+    server.send(200, "application/json", "{\n  status: {\n    two-way-serial-communication: " + serialStatus + "\n    }\n}");
   } else {
     Serial.println("503");
-    server.send(503, "application/json", "{\n  status: {\n    two-way-serial-communicstion: false\n    }\n}");
+    server.send(503, "application/json", "{\n  status: {\n    two-way-serial-communication: ERROR\n    }\n}");
+  }
+}
+
+/**
+ * LED status request controller
+ */
+void requestLedStatus() {
+  Serial.println("GET /led");
+}
+
+/**
+ * LED toggle request controller
+ */
+void requestLedToggle() {
+  Serial.println("GET /led/toggle");
+}
+
+/**
+ *
+ */
+void responseLedStatus(String sensorMessage) {
+  String serialStatus;
+
+  // serial_status: x
+  serialStatus = sensorMessage.substring(12, 17);
+  serialStatus.trim();
+
+  // Send response
+  if (serialStatus == "true" || serialStatus == "false") {
+    Serial.println("200");
+    server.send(200, "application/json", "{\n  status: {\n    led-on: " + serialStatus + "\n    }\n}");
+  } else {
+    Serial.println("503");
+    server.send(503, "application/json", "{\n  status: {\n    led-on: ERROR\n    }\n}");
   }
 }
 
