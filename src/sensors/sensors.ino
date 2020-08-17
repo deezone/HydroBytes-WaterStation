@@ -67,10 +67,10 @@ void loop() {
       int ledState = toggleLed();
       sendLedStatus(ledState);
     } else if (serverMessage.indexOf("GET /led") >= 0) {
-      int ledState = ledStatus();
+      int ledState = getLedStatus();
       sendLedStatus(ledState);
     } else if (serverMessage.indexOf("GET /water") >= 0) {
-      int waterLevel = waterLevel();
+      int waterLevel = getWaterLevel();
       sendWaterLevelStatus(waterLevel);
     }
   }
@@ -79,7 +79,7 @@ void loop() {
 /**
  * Get the current state of the LED - on (1)/off (0)
  */
-int ledStatus() {
+int getLedStatus() {
   int ledState = 0;
 
   // Get LED reading
@@ -107,12 +107,17 @@ int toggleLed() {
 void sendLedStatus(int ledState) {
   String serialMessage;
 
-  if (ledState == 1) {
-    serialMessage = "led_status: true";
-  } else if (ledState == 0) {
-    serialMessage = "led_status: false";
-  } else {
-    serialMessage = "led_status: ERROR";
+  switch (ledState) {
+    case 0:
+      serialMessage = "led_status: false";
+      break;
+
+    case 1:
+      serialMessage = "led_status: true";
+      break;
+
+    default:
+      serialMessage = "led_status: ERROR";
   }
 
   // Send server led status
@@ -122,12 +127,13 @@ void sendLedStatus(int ledState) {
   Serial.println(serialMessage);
 }
 
-int waterLevel() {
+int getWaterLevel() {
   int waterSensorHighStatus;
   int waterSensorMidStatus;
   int waterSensorLowStatus;
   int waterLevelSum;
-  
+
+  // Digital: 1/0
   waterSensorLowStatus = digitalRead(waterSensorLowPin);
   waterSensorMidStatus = digitalRead(waterSensorMidPin);
   waterSensorHighStatus = digitalRead(waterSensorHighPin);
@@ -141,16 +147,25 @@ int waterLevel() {
 void sendWaterLevelStatus(int waterLevel) {
   String waterLevelMessage;
 
-  if (waterLevel == 0) {
-    waterLevelMessage = "water_level: empty";
-  } else if (ledState == 1) {
-    waterLevelMessage = "water_level: low";
-  } else if (ledState == 2) {{
-    waterLevelMessage = "water_level: midway";
-  } else if (ledState == 3) {{
-    waterLevelMessage = "water_level: full";
-  } else {
-    waterLevelMessage = "water_level: ERROR";
+  switch (waterLevel) {
+    case 0:
+      waterLevelMessage = "water_level: empty";
+      break;
+
+    case 1:
+      waterLevelMessage = "water_level: low";
+      break;
+
+    case 2:
+      waterLevelMessage = "water_level: midway";
+      break;
+
+    case 3:
+      waterLevelMessage = "water_level: full";
+      break;
+
+    default:
+      waterLevelMessage = "water_level: ERROR";
   }
 
   // Send server led status
