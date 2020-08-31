@@ -4,9 +4,14 @@ SoftwareSerial serverSerial(10, 11);
 // initialize pins
 uint8_t pin_led = 12;
 
-int waterSensorHighPin = 6;
+int waterSensorLowPin  = 6;
+uint8_t waterSensorLowLedPin  = 2;
+
 int waterSensorMidPin  = 7;
-int waterSensorLowPin  = 8;
+uint8_t waterSensorMidLedPin  = 3;
+
+int waterSensorHighPin = 8;
+uint8_t waterSensorHighLedPin  = 4;
 
 /**
  * setup()
@@ -29,8 +34,13 @@ void setup() {
   pinMode(pin_led, OUTPUT);
 
   pinMode(waterSensorHighPin, INPUT);
+  pinMode(waterSensorLowLedPin, OUTPUT);
+
   pinMode(waterSensorMidPin,  INPUT);
+  pinMode(waterSensorMidLedPin, OUTPUT);
+
   pinMode(waterSensorLowPin,  INPUT);
+  pinMode(waterSensorHighLedPin, OUTPUT);
 
   Serial.println("Sensors: pin assignment complete...");
   Serial.println("");
@@ -128,15 +138,20 @@ void sendLedStatus(int ledState) {
 }
 
 int getWaterLevel() {
-  int waterSensorHighStatus;
-  int waterSensorMidStatus;
-  int waterSensorLowStatus;
-  int waterLevelSum;
+  int waterSensorHighStatus = 0;
+  int waterSensorMidStatus  = 0;
+  int waterSensorLowStatus  = 0;
+  int waterLevelSum = 0;
 
   // Digital: 1/0
-  waterSensorLowStatus = digitalRead(waterSensorLowPin);
-  waterSensorMidStatus = digitalRead(waterSensorMidPin);
+  waterSensorLowStatus  = digitalRead(waterSensorLowPin);
+  waterSensorMidStatus  = digitalRead(waterSensorMidPin);
   waterSensorHighStatus = digitalRead(waterSensorHighPin);
+
+  // Set related led to the same on/off state of the water sensor
+  digitalWrite(waterSensorLowLedPin, waterSensorLowStatus);
+  digitalWrite(waterSensorMidLedPin, waterSensorMidStatus);
+  digitalWrite(waterSensorHighLedPin, waterSensorHighStatus);
 
   // Calculte water level -> 0: empty - 3: full
   waterLevelSum = waterSensorLowStatus + waterSensorMidStatus + waterSensorHighStatus;
