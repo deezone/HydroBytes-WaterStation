@@ -112,6 +112,10 @@ void handleRoot() {
   // JSON response of application status
   String body = "{\n";
   body += "  \"hydrobytes-water-station\": \"ok\"\n";
+  body += "  \"release\": {\n";
+  body += "    \"version\": \"v0.1.0\",\n";
+  body += "    \"date\": \"30 August 2020\",\n";
+  body += "  }\n";
   body += "  \"paths\": {\n";
   body += "    \"/\": \"Welcome message\",\n";
   body += "    \"/status\": \"Current state of subsystems\"\n";
