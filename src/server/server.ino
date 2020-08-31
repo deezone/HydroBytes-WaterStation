@@ -49,7 +49,7 @@ void setup() {
 
   Serial.println("");
   Serial.println("HydroBites Water Station - Server");
-  Serial.println("v0.0.3");
+  Serial.println("v0.1.0");
   Serial.println("");
 
   Serial.println("Configuring access point...");
@@ -72,6 +72,7 @@ void setup() {
   server.on("/status", HTTP_GET, requestStatus);
   server.on("/led", HTTP_GET, requestLedStatus);
   server.on("/led/toggle", HTTP_GET, requestLedToggle);
+  server.on("/water", HTTP_GET, requestWaterLevel);
 
   server.begin();
   Serial.println("HTTP server started");
@@ -84,7 +85,7 @@ void setup() {
 void loop() {
   String sensorMessage;
 
-  // Serial messages from sensor (Uno)
+  // Serial messages from sensors (Uno)
   while (Serial.available()) {
     sensorMessage = Serial.readStringUntil('\n');
 
@@ -92,6 +93,8 @@ void loop() {
       responseStatus(sensorMessage);
     } else if (sensorMessage.indexOf("led_status:") >= 0) {
       responseLedStatus(sensorMessage);
+    } else if (sensorMessage.indexOf("water_level:") >= 0) {
+      responseWaterLevel(sensorMessage);
     }
   }
 
@@ -113,10 +116,11 @@ void handleRoot() {
   String body = "{\n";
   body += "  \"hydrobytes-water-station\": \"ok\"\n";
   body += "  \"paths\": {\n";
-  body += "    \"/\": \"Welcome message\",\n";
+  body += "    \"/\": \"Welcome\",\n";
   body += "    \"/status\": \"Current state of subsystems\"\n";
   body += "    \"/led\": \"Current state of LED - On/Off\"\n";
   body += "    \"/led/toggle\": \"Toggle LED On/Off\"\n";
+  body += "    \"/water\": \"Current water level\"\n";
   body += "  }\n";
   body += "}";
 
@@ -165,7 +169,7 @@ void requestLedToggle() {
 }
 
 /**
- *
+ * Led status response
  */
 void responseLedStatus(String sensorMessage) {
   String serialStatus;
@@ -176,11 +180,38 @@ void responseLedStatus(String sensorMessage) {
 
   // Send response
   if (serialStatus == "true" || serialStatus == "false") {
-    Serial.println("200");
+    Serial.println("led_status: 200");
     server.send(200, "application/json", "{\n  status: {\n    led-on: " + serialStatus + "\n    }\n}");
   } else {
-    Serial.println("503");
+    Serial.println("led_status: 503");
     server.send(503, "application/json", "{\n  status: {\n    led-on: ERROR\n    }\n}");
+  }
+}
+
+/**
+ * Water level status request controller
+ */
+void requestWaterLevel() {
+  Serial.println("GET /water");
+}
+
+/**
+ *
+ */
+void responseWaterLevel(String sensorMessage) {
+  String serialStatus;
+
+  // serial_status: x
+  serialStatus = sensorMessage.substring(13, 19);
+  serialStatus.trim();
+
+  // Send response
+  if (serialStatus == "empty" || serialStatus == "low" || serialStatus == "midway" || serialStatus == "full") {
+    Serial.println("water_level: 200");
+    server.send(200, "application/json", "{\n  water: {\n    level: " + serialStatus + "\n    }\n}");
+  } else {
+    Serial.println("water_level: 503");
+    server.send(503, "application/json", "{\n  water: {\n    level: ERROR\n    }\n}");
   }
 }
 
