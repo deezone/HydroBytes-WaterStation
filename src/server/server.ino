@@ -14,6 +14,10 @@
 const char *ssid = APSSID;
 const char *password = APPSK;
 
+const int OK = 200;
+const int NOTFOUND = 404;
+const int UNAVAILABLE = 503;
+
 // Instantiate ESP8266WebServer class as "server"
 ESP8266WebServer server(80);
 
@@ -128,7 +132,7 @@ void handleRoot() {
   body += "  }\n";
   body += "}";
 
-  server.send(200, "application/json", body);
+  server.send(OK, "application/json", body);
 }
 
 /**
@@ -144,18 +148,23 @@ void requestStatus() {
  */
 void responseStatus(String sensorMessage) {
   String serialStatus;
+  int responseCode = OK;
 
   // serial_status: x
   serialStatus = sensorMessage.substring(15, 19);
+  // @todo: adjust to support sensor status value in addition to serial status
+  sensorStatus = sensorMessage.substring(15, 19);
 
-  // Send response
-  if (serialStatus == "true") {
-    Serial.println("200");
-    server.send(200, "application/json", "{\n  status: {\n    two-way-serial-communication: " + serialStatus + "\n    }\n}");
-  } else {
-    Serial.println("503");
-    server.send(503, "application/json", "{\n  status: {\n    two-way-serial-communication: ERROR\n    }\n}");
+  String statusBody = "{\n";
+  statusBody += "  \"two-way-serial-communication\": " + serialStatus + "\n";
+  statusBody += "  \"water-sensors\": " + sensorStatus + "\n";
+  statusBody += "}";
+
+  if (serialStatus != "true" || sensorStatus != "true") {
+    responseCode = UNAVAILABLE;
   }
+
+  server.send(responseCode, "application/json", "{\n  status: " + statusBody + "\n}");
 }
 
 /**
@@ -177,19 +186,26 @@ void requestLedToggle() {
  */
 void responseLedStatus(String sensorMessage) {
   String serialStatus;
+  String responseBody;
+  int responseCode;
 
   // serial_status: x
   serialStatus = sensorMessage.substring(12, 17);
   serialStatus.trim();
 
+  responseBody = "{\n  status: {\n    led-on: " + serialStatus + "\n    }\n}";
+
   // Send response
   if (serialStatus == "true" || serialStatus == "false") {
-    Serial.println("led_status: 200");
-    server.send(200, "application/json", "{\n  status: {\n    led-on: " + serialStatus + "\n    }\n}");
+    Serial.print("led_status: ");
+    Serial.println(OK);
+    responseCode = OK;
   } else {
-    Serial.println("led_status: 503");
-    server.send(503, "application/json", "{\n  status: {\n    led-on: ERROR\n    }\n}");
+    Serial.print("led_status: ");
+    Serial.println(Unavailable);
+    responseCode = UNAVAILABLE;
   }
+  server.send(responseCode, "application/json", responseBody);
 }
 
 /**
@@ -204,19 +220,24 @@ void requestWaterLevel() {
  */
 void responseWaterLevel(String sensorMessage) {
   String serialStatus;
+  String responseBody;
+  int responseCode;
 
   // serial_status: x
   serialStatus = sensorMessage.substring(13, 19);
   serialStatus.trim();
+  responseBody = "{\n  water: {\n    level: " + serialStatus + "\n    }\n}"
 
   // Send response
+  Serial.println("water_level: ");
   if (serialStatus == "empty" || serialStatus == "low" || serialStatus == "midway" || serialStatus == "full") {
-    Serial.println("water_level: 200");
-    server.send(200, "application/json", "{\n  water: {\n    level: " + serialStatus + "\n    }\n}");
+    Serial.println(OK);
+    responseCode = OK;
   } else {
-    Serial.println("water_level: 503");
-    server.send(503, "application/json", "{\n  water: {\n    level: ERROR\n    }\n}");
+    Serial.println(Unavailable);
+    responseCode = UNAVAILABLE;
   }
+  server.send(responseCode, "application/json", responseBody);
 }
 
 /**
@@ -224,5 +245,5 @@ void responseWaterLevel(String sensorMessage) {
  * in the request
  */
 void handleNotFound() {
-  server.send(404, "text/plain", "404: Not found");
+  server.send(NOTFOUND, "application/json", "{\n  status: Not Found\n}");
 }
