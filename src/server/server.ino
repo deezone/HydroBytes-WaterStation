@@ -1,22 +1,47 @@
 /**
  * HydroBites WaterStation http server
  */
+
+ /**
+  * See https://www.deviceplus.com/arduino/arduino-preprocessor-directives-tutorial/
+  * for details on how #include works. Specifically the search rules based on "<" and ">"
+  * usage for where the preprocessor searches for the file.
+  */
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
 
-/* WiFi credentials. */
+/**
+ * WiFi credentials.
+ *
+ * Note use of "ifndef" to ensure excisting constant "APSSID" does not attempt to be ressigned.
+ * If it's undefined, the next line defines the constant.
+ *
+ * https://www.arduino.cc/reference/en/language/structure/further-syntax/define/
+ *
+ * #define is a useful C++ component that allows the programmer to give a name to a constant value
+ * before the program is compiled. Defined constants in arduino don’t take up any program memory
+ * space on the chip. The compiler will replace references to these constants with the defined value
+ * at compile time.
+ */
 #ifndef APSSID
 #define APSSID "HydroBytes_WaterStation"
 #define APPSK  "undefined" // password
 #endif
 
+/**
+ * https://www.arduino.cc/reference/en/language/variables/variable-scope-qualifiers/const/
+ *
+ * In general, the const keyword is preferred for defining constants and should be used instead
+ * of #define.
+ */
+
 const char *ssid = APSSID;
 const char *password = APPSK;
 
-const int OK = 200;
-const int NOTFOUND = 404;
-const int UNAVAILABLE = 503;
+const uint8_t response_OK = 200;
+const uint8_t response_NOT_FOUND = 404;
+const uint8_t response_UNAVAILABLE = 503;
 
 // Instantiate ESP8266WebServer class as "server"
 ESP8266WebServer server(80);
@@ -53,7 +78,7 @@ void setup() {
 
   Serial.println("");
   Serial.println("HydroBites Water Station - Server");
-  Serial.println("v0.1.0");
+  Serial.println("v0.1.1");
   Serial.println("");
 
   Serial.println("Configuring access point...");
@@ -132,7 +157,7 @@ void handleRoot() {
   body += "  }\n";
   body += "}";
 
-  server.send(OK, "application/json", body);
+  server.send(response_OK, "application/json", body);
 }
 
 /**
@@ -148,7 +173,8 @@ void requestStatus() {
  */
 void responseStatus(String sensorMessage) {
   String serialStatus;
-  int responseCode = OK;
+  String sensorStatus;
+  int responseCode = response_OK;
 
   // serial_status: x
   serialStatus = sensorMessage.substring(15, 19);
@@ -157,11 +183,11 @@ void responseStatus(String sensorMessage) {
 
   String statusBody = "{\n";
   statusBody += "  \"two-way-serial-communication\": " + serialStatus + "\n";
-  statusBody += "  \"water-sensors\": " + sensorStatus + "\n";
+  statusBody += "    \"water-sensors\": " + sensorStatus + "\n";
   statusBody += "}";
 
   if (serialStatus != "true" || sensorStatus != "true") {
-    responseCode = UNAVAILABLE;
+    responseCode = response_UNAVAILABLE;
   }
 
   server.send(responseCode, "application/json", "{\n  status: " + statusBody + "\n}");
@@ -198,12 +224,12 @@ void responseLedStatus(String sensorMessage) {
   // Send response
   if (serialStatus == "true" || serialStatus == "false") {
     Serial.print("led_status: ");
-    Serial.println(OK);
-    responseCode = OK;
+    Serial.println(response_OK);
+    responseCode = response_OK;
   } else {
     Serial.print("led_status: ");
-    Serial.println(Unavailable);
-    responseCode = UNAVAILABLE;
+    Serial.println(response_UNAVAILABLE);
+    responseCode = response_UNAVAILABLE;
   }
   server.send(responseCode, "application/json", responseBody);
 }
@@ -226,16 +252,16 @@ void responseWaterLevel(String sensorMessage) {
   // serial_status: x
   serialStatus = sensorMessage.substring(13, 19);
   serialStatus.trim();
-  responseBody = "{\n  water: {\n    level: " + serialStatus + "\n    }\n}"
+  responseBody = "{\n  water: {\n    level: " + serialStatus + "\n    }\n}";
 
   // Send response
   Serial.println("water_level: ");
   if (serialStatus == "empty" || serialStatus == "low" || serialStatus == "midway" || serialStatus == "full") {
-    Serial.println(OK);
-    responseCode = OK;
+    Serial.println(response_OK);
+    responseCode = response_OK;
   } else {
-    Serial.println(Unavailable);
-    responseCode = UNAVAILABLE;
+    Serial.println(response_UNAVAILABLE);
+    responseCode = response_UNAVAILABLE;
   }
   server.send(responseCode, "application/json", responseBody);
 }
@@ -245,5 +271,5 @@ void responseWaterLevel(String sensorMessage) {
  * in the request
  */
 void handleNotFound() {
-  server.send(NOTFOUND, "application/json", "{\n  status: Not Found\n}");
+  server.send(response_NOT_FOUND , "application/json", "{\n  status: Not Found\n}");
 }

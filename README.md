@@ -28,6 +28,8 @@ This repo is for the Water Management systems of the project. It's responsibilit
 
 ### Release Notes
 Resources and thoughts on each release. Development details as well as links to help explain choices made in how the system was built.
+- [v0.1.1 - 27 September 2020](https://github.com/deezone/HydroBytes-waterManagement/blob/master/resources/releases/v00-01-01.md)
+Addition of YouTube channel as well as general release notes clean up to include images and videos to help document the project.
 - [v0.1.0 - 30 August 2020](https://github.com/deezone/HydroBytes-waterManagement/blob/master/resources/releases/v00-01-00.md)
 Water level detection on water barrel.
 - [v0.0.3 - 15 August 2020](https://github.com/deezone/HydroBytes-waterManagement/blob/master/resources/releases/v00-00-03.md)

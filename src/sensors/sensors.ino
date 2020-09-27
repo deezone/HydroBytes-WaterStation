@@ -22,7 +22,7 @@ void setup() {
   Serial.println("");
 
   Serial.println("HydroBites Water Station");
-  Serial.println("v0.1.0");
+  Serial.println("v0.1.1");
   Serial.println("");
 
   Serial.println("Sensors: Sensors <-> Server serial connection started...");
@@ -36,10 +36,10 @@ void setup() {
   pinMode(waterSensorHighPin, INPUT);
   pinMode(waterSensorLowLedPin, OUTPUT);
 
-  pinMode(waterSensorMidPin,  INPUT);
+  pinMode(waterSensorMidPin, INPUT);
   pinMode(waterSensorMidLedPin, OUTPUT);
 
-  pinMode(waterSensorLowPin,  INPUT);
+  pinMode(waterSensorLowPin, INPUT);
   pinMode(waterSensorHighLedPin, OUTPUT);
 
   Serial.println("Sensors: pin assignment complete...");
@@ -67,11 +67,14 @@ void loop() {
     // Router for sensor actions
     if (serverMessage.indexOf("GET /status") >= 0) {
 
+      int ledState = getLedStatus();
+
       // Send Serial message back to server to confirm receipt
-      serverSerial.println("serial_status: true");
+      serverSerial.println((String)"serial_status: true, led_status: " + ledState);
 
       // Log to serial monitor
       Serial.println("serial_status: true");
+      Serial.println((String)"led_status: " + ledState);
 
     } else if (serverMessage.indexOf("GET /led/toggle") >= 0) {
       int ledState = toggleLed();
@@ -153,7 +156,7 @@ int getWaterLevel() {
   digitalWrite(waterSensorMidLedPin, waterSensorMidStatus);
   digitalWrite(waterSensorHighLedPin, waterSensorHighStatus);
 
-  // Calculte water level -> 0: empty - 3: full
+  // Calculate water level -> 0: empty - 3: full
   waterLevelSum = waterSensorLowStatus + waterSensorMidStatus + waterSensorHighStatus;
 
   return waterLevelSum;
