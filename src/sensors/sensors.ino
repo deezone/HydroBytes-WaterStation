@@ -2,16 +2,19 @@
 SoftwareSerial serverSerial(10, 11);
 
 // initialize pins
-uint8_t pin_led = 12;
+const uint8_t waterSensorLowLedPin  = 2;
+const uint8_t waterSensorMidLedPin  = 3;
+const uint8_t waterSensorHighLedPin = 4;
 
-int waterSensorLowPin  = 6;
-uint8_t waterSensorLowLedPin  = 2;
+const uint8_t waterPumpPin = 5;
 
-int waterSensorMidPin  = 7;
-uint8_t waterSensorMidLedPin  = 3;
+const int waterSensorLowPin  = 6;
+const int waterSensorMidPin  = 7;
+const int waterSensorHighPin = 8;
 
-int waterSensorHighPin = 8;
-uint8_t waterSensorHighLedPin  = 4;
+// Pins 10, 11 used by ESP8266
+
+const uint8_t ledPin = 12;
 
 /**
  * setup()
@@ -22,7 +25,7 @@ void setup() {
   Serial.println("");
 
   Serial.println("HydroBites Water Station");
-  Serial.println("v0.1.1");
+  Serial.println("v0.2.0");
   Serial.println("");
 
   Serial.println("Sensors: Sensors <-> Server serial connection started...");
@@ -31,7 +34,7 @@ void setup() {
   Serial.println("Sensors: setup complete...");
 
     // Assign pins
-  pinMode(pin_led, OUTPUT);
+  pinMode(ledPin, OUTPUT);
 
   pinMode(waterSensorHighPin, INPUT);
   pinMode(waterSensorLowLedPin, OUTPUT);
@@ -74,8 +77,8 @@ void loop() {
       int ledState = getLedStatus();
       sendLedStatus(ledState);
     } else if (serverMessage.indexOf("GET /water") >= 0) {
-      int waterLevel = getWaterLevel();
-      sendWaterLevelStatus(waterLevel);
+      int waterLevelState = getWaterLevel();
+      sendWaterLevelStatus(waterLevelState);
     }
   }
 }
@@ -107,7 +110,7 @@ int getLedStatus() {
   int ledState = 0;
 
   // Get LED reading
-  ledState = digitalRead(pin_led);
+  ledState = digitalRead(ledPin);
 
   return ledState;
 }
@@ -119,8 +122,11 @@ int toggleLed() {
   int setLedState = 0;
 
   // Write the opposite of the current state
-  setLedState = !digitalRead(pin_led);
-  digitalWrite(pin_led, setLedState);
+  setLedState = !digitalRead(ledPin);
+  digitalWrite(ledPin, setLedState);
+
+  Serial.print("ledPin: ");
+  Serial.println(setLedState);
 
   return setLedState;
 }
@@ -151,6 +157,9 @@ void sendLedStatus(int ledState) {
   Serial.println(serialMessage);
 }
 
+/**
+ * Read water level sensors and toggle related LED
+ */
 int getWaterLevel() {
   int waterSensorHighStatus = 0;
   int waterSensorMidStatus  = 0;
@@ -173,6 +182,9 @@ int getWaterLevel() {
   return waterLevelSum;
 }
 
+/**
+ * Send serial message based on water level readings
+ */
 void sendWaterLevelStatus(int waterLevel) {
   String waterLevelMessage;
 
