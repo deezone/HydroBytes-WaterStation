@@ -6,7 +6,7 @@ const uint8_t waterSensorLowLedPin  = 2;
 const uint8_t waterSensorMidLedPin  = 3;
 const uint8_t waterSensorHighLedPin = 4;
 
-const uint8_t waterPumpPin = 5;
+const uint8_t waterPumpRelayPin = 5;
 
 const int waterSensorLowPin  = 6;
 const int waterSensorMidPin  = 7;
@@ -33,17 +33,22 @@ void setup() {
   
   Serial.println("Sensors: setup complete...");
 
-    // Assign pins
-  pinMode(ledPin, OUTPUT);
-
-  pinMode(waterSensorHighPin, INPUT);
-  pinMode(waterSensorLowLedPin, OUTPUT);
-
-  pinMode(waterSensorMidPin, INPUT);
-  pinMode(waterSensorMidLedPin, OUTPUT);
-
+  // Assign pins
+  // Water sensors
   pinMode(waterSensorLowPin, INPUT);
+  pinMode(waterSensorMidLedPin, OUTPUT);
+  pinMode(waterSensorHighPin, INPUT);
+
+  // Water pump
+  pinMode(waterPumpRelayPin, OUTPUT);
+
+  // Water sensor level LED indicators
+  pinMode(waterSensorLowLedPin, OUTPUT);
+  pinMode(waterSensorMidPin, INPUT);
   pinMode(waterSensorHighLedPin, OUTPUT);
+
+  // Test LED
+  pinMode(ledPin, OUTPUT);
 
   Serial.println("Sensors: pin assignment complete...");
   Serial.println("");
@@ -76,6 +81,9 @@ void loop() {
     } else if (serverMessage.indexOf("GET /led") >= 0) {
       int ledState = getLedStatus();
       sendLedStatus(ledState);
+    } else if (serverMessage.indexOf("GET /water/irrigate") >= 0) {
+      int waterPumpState = toggleWaterPump();
+      sendWaterPumpStatus(waterPumpState);
     } else if (serverMessage.indexOf("GET /water") >= 0) {
       int waterLevelState = getWaterLevel();
       sendWaterLevelStatus(waterLevelState);
@@ -214,4 +222,47 @@ void sendWaterLevelStatus(int waterLevel) {
 
   // Log water level to local terminal
   Serial.println(waterLevelMessage);
+}
+
+/**
+ * Adjust the state of water pump between on/off
+ */
+int toggleWaterPump() {
+  int setPumpState = 0;
+
+  // Write the opposite of the current state
+  // The relay is active low, it turns on when set to LOW
+  setPumpState = !digitalRead(waterPumpRelayPin);
+  digitalWrite(waterPumpRelayPin, setPumpState);
+
+  Serial.print("waterPumpRelayPin: ");
+  Serial.println(setPumpState);
+
+  return setPumpState;
+}
+
+/**
+ * Send Serial message back to server of current irrigation (water pump) state
+ */
+void sendWaterPumpStatus(int pumpState) {
+  String serialMessage;
+
+  switch (pumpState) {
+    case 0:
+      serialMessage = "irrigation_status: true";
+      break;
+
+    case 1:
+      serialMessage = "irrigation_status: false";
+      break;
+
+    default:
+      serialMessage = "irrigation_status: ERROR";
+  }
+
+  // Send server pump status
+  serverSerial.println(serialMessage);
+
+  // Log pump status to local terminal
+  Serial.println(serialMessage);
 }
