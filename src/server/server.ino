@@ -178,8 +178,7 @@ void responseStatus(String sensorMessage) {
 
   // serial_status: x
   serialStatus = sensorMessage.substring(15, 19);
-  // @todo: adjust to support sensor status value in addition to serial status
-  sensorStatus = sensorMessage.substring(15, 19);
+  sensorStatus = sensorMessage.substring(34, 40);
 
   String statusBody = "{\n";
   statusBody += "  \"two-way-serial-communication\": " + serialStatus + "\n";

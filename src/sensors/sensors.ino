@@ -66,16 +66,7 @@ void loop() {
 
     // Router for sensor actions
     if (serverMessage.indexOf("GET /status") >= 0) {
-
-      int ledState = getLedStatus();
-
-      // Send Serial message back to server to confirm receipt
-      serverSerial.println((String)"serial_status: true, led_status: " + ledState);
-
-      // Log to serial monitor
-      Serial.println("serial_status: true");
-      Serial.println((String)"led_status: " + ledState);
-
+      sendStatus();
     } else if (serverMessage.indexOf("GET /led/toggle") >= 0) {
       int ledState = toggleLed();
       sendLedStatus(ledState);
@@ -87,6 +78,26 @@ void loop() {
       sendWaterLevelStatus(waterLevel);
     }
   }
+}
+
+/**
+ * Report current serial and sensor status
+ */
+void sendStatus() {
+  String sensorState = "false";
+
+  int waterLevelState = getWaterLevel();
+  if (waterLevelState > 0) {
+    sensorState = "true";
+  }
+
+  // Send Serial message back to server to confirm receipt. If this response works then
+  // the serial connection is working
+  serverSerial.println("serial_status: true, sensor_status: " + sensorState);
+
+  // Log to serial monitor
+  Serial.println("serial_status: true");
+  Serial.println("sensor_status: " + sensorState);
 }
 
 /**
