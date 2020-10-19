@@ -249,11 +249,11 @@ void sendWaterPumpStatus(int pumpState) {
 
   switch (pumpState) {
     case 0:
-      serialMessage = "irrigation_status: true";
+      serialMessage = "irrigation_status: false";
       break;
 
     case 1:
-      serialMessage = "irrigation_status: false";
+      serialMessage = "irrigation_status: true";
       break;
 
     default:
