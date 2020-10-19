@@ -179,12 +179,14 @@ void responseStatus(String sensorMessage) {
   String serialStatus;
   String sensorStatus;
   String buf;
-  DynamicJsonDocument doc(512);
+  DynamicJsonDocument doc(128);
   int responseCode = response_OK;
 
   // serial_status: x
   serialStatus = sensorMessage.substring(15, 19);
-  sensorStatus = sensorMessage.substring(36, 42);
+  serialStatus.trim();
+  sensorStatus = sensorMessage.substring(36, 41);
+  sensorStatus.trim();
 
   doc["status"]["two-way-serial-communication"] = serialStatus;
   doc["status"]["water-sensors"] = sensorStatus;
@@ -218,17 +220,17 @@ void responseLedStatus(String sensorMessage) {
   String ledStatus;
   String responseBody;
   String buf;
-  DynamicJsonDocument doc(512);
+  DynamicJsonDocument doc(64);
   int responseCode;
 
   // led_status: x
   ledStatus = sensorMessage.substring(12, 17);
   ledStatus.trim();
 
-  doc["status"]["led-on"] = ledStatus;
+  doc["status"]["led"] = ledStatus;
 
   // Send response
-  if (serialStatus == "true" || serialStatus == "false") {
+  if (ledStatus == "true" || ledStatus == "false") {
     Serial.print("led_status: ");
     Serial.println(response_OK);
     responseCode = response_OK;
@@ -255,7 +257,7 @@ void requestWaterLevel() {
 void responseWaterLevel(String sensorMessage) {
   String waterLevelStatus;
   String buf;
-  DynamicJsonDocument doc(512);
+  DynamicJsonDocument doc(64);
   String responseBody;
   int responseCode;
 
@@ -292,12 +294,12 @@ void requestIrrigateToggle() {
 void responseIrrigate(String sensorMessage) {
   String irrigationStatus;
   String buf;
-  DynamicJsonDocument doc(512);
+  DynamicJsonDocument doc(64);
   String responseBody;
   int responseCode;
 
   // irrigation_status: x
-  irrigationStatus = sensorMessage.substring(19, 22);
+  irrigationStatus = sensorMessage.substring(19, 24);
   irrigationStatus.trim();
 
   doc["water"]["irrigation"] = irrigationStatus;
