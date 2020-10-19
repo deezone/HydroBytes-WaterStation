@@ -318,7 +318,6 @@ void responseIrrigate(String sensorMessage) {
   server.send(responseCode, F("application/json"), buf);
 }
 
-
 /**
  * Send HTTP status 404 (Not Found) when there's no handler for the URI
  * in the request
