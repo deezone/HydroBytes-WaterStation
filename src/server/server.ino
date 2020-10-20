@@ -292,21 +292,32 @@ void requestIrrigateToggle() {
  * Water irrigation status response
  */
 void responseIrrigate(String sensorMessage) {
+  String waterLevelStatus;
   String irrigationStatus;
+  String irrigationDuration;
   String buf;
   DynamicJsonDocument doc(64);
   String responseBody;
   int responseCode;
 
-  // irrigation_status: x
+  // water_level_status: x, irrigation_status: x, irrigation_duration: x
+  waterLevelStatus = sensorMessage.substring(19, 24);
+  waterLevelStatus.trim();
   irrigationStatus = sensorMessage.substring(19, 24);
   irrigationStatus.trim();
+  irrigationDuration = sensorMessage.substring(19, 24);
+  irrigationDuration.trim();
 
-  doc["water"]["irrigation"] = irrigationStatus;
+  doc["water"]["level"] = waterLevelStatus;
+  doc["water"]["irrigation"]["status"] = irrigationStatus;
+  doc["water"]["irrigation"]["duration"] = irrigationDuration;
 
   // Send response
   Serial.println("irrigation_status: ");
-  if (irrigationStatus == "on" || irrigationStatus == "off") {
+  if ((waterLevelStatus == "on" || waterLevelStatus == "off") &&
+     (irrigationStatus == "??" || irrigationStatus == "??") &&
+     (irrigationDuration != "??"))
+  {
     Serial.println(response_OK);
     responseCode = response_OK;
   } else {

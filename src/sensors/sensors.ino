@@ -16,6 +16,11 @@ const int waterSensorHighPin = 8;
 
 const uint8_t ledPin = 12;
 
+const uint8_t waterLevel_empty = 0;
+const uint8_t waterLevel_low   = 1;
+const uint8_t waterLevel_mid   = 2;
+const uint8_t waterLevel_high  = 3;
+
 /**
  * setup()
  */
@@ -82,8 +87,9 @@ void loop() {
       int ledState = getLedStatus();
       sendLedStatus(ledState);
     } else if (serverMessage.indexOf("GET /water/irrigate") >= 0) {
-      int waterPumpState = toggleWaterPump();
-      sendWaterPumpStatus(waterPumpState);
+      int waterLevelState = getWaterLevel();
+      int waterPumpState = toggleWaterPump(waterLevelState);
+      sendWaterPumpStatus(waterPumpState, waterLevelState);
     } else if (serverMessage.indexOf("GET /water") >= 0) {
       int waterLevelState = getWaterLevel();
       sendWaterLevelStatus(waterLevelState);
@@ -227,12 +233,19 @@ void sendWaterLevelStatus(int waterLevel) {
 /**
  * Adjust the state of water pump between on/off
  */
-int toggleWaterPump() {
+int toggleWaterPump(int waterLevel) {
   int setPumpState = 0;
+  int waterLevel = 0;
+
+  // Do not run pump if water level is low
+  if (waterLevel <= waterLevel_mid) {
+    return LOW;
+  }
 
   // Write the opposite of the current state
   // The relay is active low, it turns on when set to LOW
   setPumpState = !digitalRead(waterPumpRelayPin);
+
   digitalWrite(waterPumpRelayPin, setPumpState);
 
   Serial.print("waterPumpRelayPin: ");
@@ -244,7 +257,7 @@ int toggleWaterPump() {
 /**
  * Send Serial message back to server of current irrigation (water pump) state
  */
-void sendWaterPumpStatus(int pumpState) {
+void sendWaterPumpStatus(int pumpState, int waterLevelState) {
   String serialMessage;
 
   switch (pumpState) {
