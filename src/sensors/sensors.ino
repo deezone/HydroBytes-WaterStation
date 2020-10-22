@@ -101,20 +101,21 @@ void loop() {
  * Report current serial and sensor status
  */
 void sendStatus() {
-  String sensorState = "false";
+  int sensorState = 0; // false
 
   int waterLevelState = getWaterLevel();
   if (waterLevelState > 0) {
-    sensorState = "true";
+    sensorState = 1; // true
   }
 
   // Send Serial message back to server to confirm receipt. If this response works then
   // the serial connection is working
-  serverSerial.println("serial_status: true, sensor_status: " + sensorState);
+  // serial_status (sr), sensor_status (ss)
+  serverSerial.print("sr: 1, ss: ");
+  serverSerial.println(sensorState);
 
   // Log to serial monitor
-  Serial.println("serial_status: true");
-  Serial.println("sensor_status: " + sensorState);
+  Serial.println("serial_status: true, sensor_status: " + sensorState);
 }
 
 /**
@@ -139,7 +140,7 @@ int toggleLed() {
   setLedState = !digitalRead(ledPin);
   digitalWrite(ledPin, setLedState);
 
-  Serial.print("ledPin: ");
+  Serial.print("led_state: ");
   Serial.println(setLedState);
 
   return setLedState;
@@ -149,26 +150,13 @@ int toggleLed() {
  * Send Serial message back to server of current led state
  */
 void sendLedStatus(int ledState) {
-  String serialMessage;
-
-  switch (ledState) {
-    case 0:
-      serialMessage = "led_status: false";
-      break;
-
-    case 1:
-      serialMessage = "led_status: true";
-      break;
-
-    default:
-      serialMessage = "led_status: ERROR";
-  }
-
   // Send server led status
-  serverSerial.println(serialMessage);
+  serverSerial.print("ls: ");
+  serverSerial.println(ledState);
 
   // Log led status to local terminal
-  Serial.println(serialMessage);
+  Serial.print("led_state: ");
+  Serial.println(ledState);
 }
 
 /**
@@ -200,34 +188,13 @@ int getWaterLevel() {
  * Send serial message based on water level readings
  */
 void sendWaterLevelStatus(int waterLevel) {
-  String waterLevelMessage;
-
-  switch (waterLevel) {
-    case 0:
-      waterLevelMessage = "water_level: empty";
-      break;
-
-    case 1:
-      waterLevelMessage = "water_level: low";
-      break;
-
-    case 2:
-      waterLevelMessage = "water_level: midway";
-      break;
-
-    case 3:
-      waterLevelMessage = "water_level: full";
-      break;
-
-    default:
-      waterLevelMessage = "water_level: ERROR";
-  }
-
   // Send server led status
-  serverSerial.println(waterLevelMessage);
+  serverSerial.print("wl: ");
+  serverSerial.println(waterLevel);
 
   // Log water level to local terminal
-  Serial.println(waterLevelMessage);
+  Serial.print("water_level: ");
+  Serial.println(waterLevel);
 }
 
 /**
@@ -248,7 +215,7 @@ int toggleWaterPump(int waterLevel) {
 
   digitalWrite(waterPumpRelayPin, setPumpState);
 
-  Serial.print("waterPumpRelayPin: ");
+  Serial.print("water_pump: ");
   Serial.println(setPumpState);
 
   return setPumpState;
@@ -258,24 +225,19 @@ int toggleWaterPump(int waterLevel) {
  * Send Serial message back to server of current irrigation (water pump) state
  */
 void sendWaterPumpStatus(int pumpState, int waterLevelState) {
-  String serialMessage;
-
-  switch (pumpState) {
-    case 0:
-      serialMessage = "irrigation_status: false";
-      break;
-
-    case 1:
-      serialMessage = "irrigation_status: true";
-      break;
-
-    default:
-      serialMessage = "irrigation_status: ERROR";
-  }
-
   // Send server pump status
-  serverSerial.println(serialMessage);
+  serverSerial.print("is: );
+  serverSerial.print(pumpState);
+
+  // Send water level state
+  serverSerial.print(", wl: );
+  serverSerial.print(waterLevelState);
 
   // Log pump status to local terminal
-  Serial.println(serialMessage);
+  Serial.print("irrigation_status: ");
+  Serial.print(pumpState);
+
+  // Log water level state to local terminal
+  Serial.print(", water_level: ");
+  Serial.println(waterLevelState);
 }

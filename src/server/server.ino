@@ -120,14 +120,21 @@ void loop() {
   while (Serial.available()) {
     sensorMessage = Serial.readStringUntil('\n');
 
-    if (sensorMessage.indexOf("serial_status:") >= 0) {
+    // serial_status
+    if (sensorMessage.indexOf("ss:") >= 0) {
       responseStatus(sensorMessage);
-    } else if (sensorMessage.indexOf("led_status:") >= 0) {
+
+    // led_status
+    } else if (sensorMessage.indexOf("ls:") >= 0) {
       responseLedStatus(sensorMessage);
-    } else if (sensorMessage.indexOf("water_level:") >= 0) {
-      responseWaterLevel(sensorMessage);
-    } else if (sensorMessage.indexOf("irrigation_status:") >= 0) {
+
+    // irrigation_status
+    } else if (sensorMessage.indexOf("is:") >= 0) {
       responseIrrigate(sensorMessage);
+
+    // water_level
+    } else if (sensorMessage.indexOf("wl:") >= 0) {
+      responseWaterLevel(sensorMessage);
     }
   }
 
@@ -301,12 +308,38 @@ void responseIrrigate(String sensorMessage) {
   int responseCode;
 
   // water_level_status: x, irrigation_status: x, irrigation_duration: x
-  waterLevelStatus = sensorMessage.substring(19, 24);
+  // wl: x, is: x, id: x
+  waterLevelStatus = sensorMessage.substring(3, 4);
   waterLevelStatus.trim();
-  irrigationStatus = sensorMessage.substring(19, 24);
+
+  case (waterLevelStatus):
+    switch 0:
+      waterLevelStatus = "empty";
+      break;
+      
+    switch 1:
+      waterLevelStatus = "low";
+      break;
+
+    switch 2:
+      waterLevelStatus = "mid";
+      break;
+
+    switch 3:
+      waterLevelStatus = "full";
+      break;
+
+    default:
+      waterLevelStatus = "ERROR";
+  }
+      
+  irrigationStatus = sensorMessage.substring(10, 11);
   irrigationStatus.trim();
-  irrigationDuration = sensorMessage.substring(19, 24);
+  irrigationStatus = irrigationStatus == "1" ? "on" : "off";
+
+  irrigationDuration = sensorMessage.substring(17);
   irrigationDuration.trim();
+  irrigationDuration = irrigationDuration >= "0" ? irrigationDuration : 'ERROR';
 
   doc["water"]["level"] = waterLevelStatus;
   doc["water"]["irrigation"]["status"] = irrigationStatus;
@@ -314,9 +347,9 @@ void responseIrrigate(String sensorMessage) {
 
   // Send response
   Serial.println("irrigation_status: ");
-  if ((waterLevelStatus == "on" || waterLevelStatus == "off") &&
-     (irrigationStatus == "??" || irrigationStatus == "??") &&
-     (irrigationDuration != "??"))
+  if (waterLevelStatus != "ERROR" &&
+     (irrigationStatus == "On" || irrigationStatus == "Off") &&
+     (irrigationDuration != "ERROR"))
   {
     Serial.println(response_OK);
     responseCode = response_OK;
