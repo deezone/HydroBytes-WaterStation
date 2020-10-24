@@ -30,7 +30,7 @@ void setup() {
   Serial.println("");
 
   Serial.println("HydroBites Water Station");
-  Serial.println("v0.2.0");
+  Serial.println("v0.2.1");
   Serial.println("");
 
   Serial.println("Sensors: Sensors <-> Server serial connection started...");

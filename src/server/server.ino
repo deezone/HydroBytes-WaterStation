@@ -79,7 +79,7 @@ void setup() {
 
   Serial.println("");
   Serial.println("HydroBites Water Station - Server");
-  Serial.println("v0.2.0");
+  Serial.println("v0.2.1");
   Serial.println("");
 
   Serial.println("Configuring access point...");
