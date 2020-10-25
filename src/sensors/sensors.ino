@@ -166,7 +166,8 @@ int getWaterLevel() {
   int waterSensorHighStatus = 0;
   int waterSensorMidStatus  = 0;
   int waterSensorLowStatus  = 0;
-  int waterLevelSum = 0;
+  bool sensorCheckOk = false;
+  int waterLevel = 0;
 
   // Digital: 1/0
   waterSensorLowStatus  = digitalRead(waterSensorLowPin);
@@ -178,10 +179,29 @@ int getWaterLevel() {
   digitalWrite(waterSensorMidLedPin, waterSensorMidStatus);
   digitalWrite(waterSensorHighLedPin, waterSensorHighStatus);
 
-  // Calculate water level -> 0: empty - 3: full
-  waterLevelSum = waterSensorLowStatus + waterSensorMidStatus + waterSensorHighStatus;
+  // Validate sensor readings, a lower sensor should not have a false status
+  // High
+  if (waterSensorHighStatus == 1 && waterSensorMidStatus == 1 && waterSensorLowStatus == 1) {
+    return 3;
+  }
 
-  return waterLevelSum;
+  // Mid
+  if (waterSensorHighStatus == 0 && waterSensorMidStatus == 1 && waterSensorLowStatus == 1) {
+    return 2;
+  }
+
+  // Low
+  if (waterSensorHighStatus == 0 && waterSensorMidStatus == 0 && waterSensorLowStatus == 1) {
+    return 1;
+  }
+
+  // Empty
+  if (waterSensorHighStatus == 0 && waterSensorMidStatus == 0 && waterSensorLowStatus == 0) {
+    return 0;
+  }
+
+  // Error
+  return -1;
 }
 
 /**
@@ -203,9 +223,14 @@ void sendWaterLevelStatus(int waterLevel) {
 int toggleWaterPump(int waterLevel) {
   int setPumpState = 0;
 
+  // Error detecting water level
+  if (waterLevel == -1) {
+    return -1;
+  }
+
   // Do not run pump if water level is low
   if (waterLevel <= waterLevel_mid) {
-    return LOW;
+    return 0;
   }
 
   // Write the opposite of the current state
