@@ -202,7 +202,6 @@ void sendWaterLevelStatus(int waterLevel) {
  */
 int toggleWaterPump(int waterLevel) {
   int setPumpState = 0;
-  int waterLevel = 0;
 
   // Do not run pump if water level is low
   if (waterLevel <= waterLevel_mid) {
@@ -226,11 +225,11 @@ int toggleWaterPump(int waterLevel) {
  */
 void sendWaterPumpStatus(int pumpState, int waterLevelState) {
   // Send server pump status
-  serverSerial.print("is: );
+  serverSerial.print("is: ");
   serverSerial.print(pumpState);
 
   // Send water level state
-  serverSerial.print(", wl: );
+  serverSerial.print(", wl: ");
   serverSerial.print(waterLevelState);
 
   // Log pump status to local terminal
