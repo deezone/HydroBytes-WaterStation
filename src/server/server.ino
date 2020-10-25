@@ -40,6 +40,9 @@
 const char *ssid = APSSID;
 const char *password = APPSK;
 
+const String server_VERSION = "v0.2.1";
+const String server_RESEASE = "25 October 2020";
+
 const uint8_t response_OK = 200;
 const uint8_t response_NOT_FOUND = 404;
 const uint8_t response_UNAVAILABLE = 503;
@@ -78,7 +81,8 @@ void setup() {
   Serial.begin(9600);
 
   Serial.println("HydroBites Water Station - Server");
-  Serial.println("v0.2.1");
+  Serial.println(server_VERSION);
+  Serial.println(server_RESEASE);
   Serial.println("");
 
   Serial.println("Configuring access point...");
@@ -157,8 +161,8 @@ void handleRoot() {
   // Compose response
   doc["hydrobytes-water-station"] = "ok";
 
-  doc["release"]["version"] = "v0.2.0";
-  doc["release"]["date"] = "18 October 2020";
+  doc["release"]["version"] = server_VERSION;
+  doc["release"]["date"] = server_RESEASE;
 
   doc["paths"]["/"] = "Welcome";
   doc["paths"]["/status"] = "Current state of subsystem";
