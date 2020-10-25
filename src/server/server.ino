@@ -77,7 +77,6 @@ void setup() {
   // Connect to local serial port. Used to send messages to sensor controller
   Serial.begin(9600);
 
-  Serial.println("");
   Serial.println("HydroBites Water Station - Server");
   Serial.println("v0.2.1");
   Serial.println("");
@@ -302,7 +301,11 @@ void responseWaterLevel(String sensorMessage) {
 }
 
 String getWaterLevelMessage(String waterLevelStatus) {
-  // wl: x
+  // Check for error status
+  if (waterLevelStatus == "-") {
+    return "ERROR";
+  }
+
   int waterLevel = waterLevelStatus.toInt();
 
   switch (waterLevel) {
@@ -344,7 +347,7 @@ void responseIrrigate(String sensorMessage) {
   String irrigationStatus;
   String irrigationDuration;
   String buf;
-  DynamicJsonDocument doc(64);
+  DynamicJsonDocument doc(128);
   String responseBody;
   uint8_t responseCode;
 
@@ -352,6 +355,7 @@ void responseIrrigate(String sensorMessage) {
   // wl: x, is: x, id: x
   waterLevelStatus = sensorMessage.substring(4, 5);
   waterLevelStatus.trim();
+
   waterLevelStatus = getWaterLevelMessage(waterLevelStatus);
       
   irrigationStatus = sensorMessage.substring(11, 12);
@@ -363,11 +367,8 @@ void responseIrrigate(String sensorMessage) {
   irrigationDuration = irrigationDuration.toInt() >= 0 ? irrigationDuration : "ERROR";
 
   // Compose response code
-  Serial.println("irrigation_status: ");
-  if (waterLevelStatus != "ERROR" &&
-     (irrigationStatus == "On" || irrigationStatus == "Off") &&
-     (irrigationDuration != "ERROR"))
-  {
+  Serial.print("irrigation_status: ");
+  if (waterLevelStatus != "ERROR" && irrigationDuration != "ERROR") {
     Serial.println(response_OK);
     responseCode = response_OK;
   } else {
