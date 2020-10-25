@@ -1,5 +1,7 @@
 #include <SoftwareSerial.h>
-SoftwareSerial serverSerial(10, 11);
+
+const String server_VERSION = "v0.2.1";
+const String server_RELEASE = "25 October 2020";
 
 // initialize pins
 const uint8_t waterSensorLowLedPin  = 2;
@@ -12,7 +14,8 @@ const int waterSensorLowPin  = 6;
 const int waterSensorMidPin  = 7;
 const int waterSensorHighPin = 8;
 
-// Pins 10, 11 used by ESP8266
+// used by ESP8266 for serial communication
+SoftwareSerial serverSerial(10, 11); // Rx, Tx
 
 const uint8_t ledPin = 12;
 
@@ -20,6 +23,9 @@ const uint8_t waterLevel_empty = 0;
 const uint8_t waterLevel_low   = 1;
 const uint8_t waterLevel_mid   = 2;
 const uint8_t waterLevel_high  = 3;
+
+
+unsigned long previousIrrigationTime = 0;
 
 /**
  * setup()
@@ -30,7 +36,8 @@ void setup() {
   Serial.println("");
 
   Serial.println("HydroBites Water Station");
-  Serial.println("v0.2.1");
+  Serial.println(server_VERSION);
+  Serial.println(server_RELEASE);
   Serial.println("");
 
   Serial.println("Sensors: Sensors <-> Server serial connection started...");
@@ -72,6 +79,7 @@ void setup() {
  */
 void loop() {
   String serverMessage;
+  int irrigationDuration = 0;
 
   while(serverSerial.available()) {
     serverMessage = serverSerial.readStringUntil('\n');
@@ -79,20 +87,35 @@ void loop() {
 
     // Router for sensor actions
     if (serverMessage.indexOf("GET /status") >= 0) {
+
       sendStatus();
+
     } else if (serverMessage.indexOf("GET /led/toggle") >= 0) {
+
       int ledState = toggleLed();
       sendLedStatus(ledState);
+
     } else if (serverMessage.indexOf("GET /led") >= 0) {
+
       int ledState = getLedStatus();
       sendLedStatus(ledState);
+
     } else if (serverMessage.indexOf("GET /water/irrigate") >= 0) {
+
       int waterLevelState = getWaterLevel();
       int waterPumpState = toggleWaterPump(waterLevelState);
-      sendWaterPumpStatus(waterPumpState, waterLevelState);
+      unsigned long irrigationDuration = getPumpToggleDuration();
+
+      sendWaterStatus(waterLevelState, waterPumpState, irrigationDuration);
+
     } else if (serverMessage.indexOf("GET /water") >= 0) {
+
       int waterLevelState = getWaterLevel();
-      sendWaterLevelStatus(waterLevelState);
+      int waterPumpState =  getPumpStatus();
+      unsigned long irrigationToggleDuration = getToggleDuration();
+
+      sendWaterStatus(waterLevelState, waterPumpState, irrigationDuration);
+
     }
   }
 }
@@ -122,12 +145,7 @@ void sendStatus() {
  * Get the current state of the LED - on (1)/off (0)
  */
 int getLedStatus() {
-  int ledState = 0;
-
-  // Get LED reading
-  ledState = digitalRead(ledPin);
-
-  return ledState;
+  return digitalRead(ledPin);
 }
 
 /**
@@ -179,7 +197,7 @@ int getWaterLevel() {
   digitalWrite(waterSensorMidLedPin, waterSensorMidStatus);
   digitalWrite(waterSensorHighLedPin, waterSensorHighStatus);
 
-  // Validate sensor readings, a lower sensor should not have a false status
+  // Validate sensor readings, a lower sensor should not have an off status
   // High
   if (waterSensorHighStatus == 1 && waterSensorMidStatus == 1 && waterSensorLowStatus == 1) {
     return 3;
@@ -205,19 +223,6 @@ int getWaterLevel() {
 }
 
 /**
- * Send serial message based on water level readings
- */
-void sendWaterLevelStatus(int waterLevel) {
-  // Send server led status
-  serverSerial.print("wl: ");
-  serverSerial.println(waterLevel);
-
-  // Log water level to local terminal
-  Serial.print("water_level: ");
-  Serial.println(waterLevel);
-}
-
-/**
  * Adjust the state of water pump between on/off
  */
 int toggleWaterPump(int waterLevel) {
@@ -239,6 +244,9 @@ int toggleWaterPump(int waterLevel) {
 
   digitalWrite(waterPumpRelayPin, setPumpState);
 
+  // pump state toggled, set irrigation time
+  previousIrrigationTime = millis();
+
   Serial.print("water_pump: ");
   Serial.println(setPumpState);
 
@@ -246,22 +254,49 @@ int toggleWaterPump(int waterLevel) {
 }
 
 /**
- * Send Serial message back to server of current irrigation (water pump) state
+ * Get the current state of the pump - on (1)/off (0)
  */
-void sendWaterPumpStatus(int pumpState, int waterLevelState) {
-  // Send server pump status
-  serverSerial.print("is: ");
+int getPumpStatus() {
+  return digitalRead(waterPumpRelayPin);
+}
+
+/**
+ * Get the amount of time since the pump was last toggled
+ */
+unsigned long getPumpToggleDuration() {
+  return millis() - previousIrrigationTime;
+}
+
+/**
+ * Send Serial message back to server of current irrigation (water pump) state
+ *
+ * wl: x, is: x, id: x
+ */
+void sendWaterStatus(int waterLevelState, int pumpState, unsigned long irrigationDuration) {
+  int seconds = (int) (irrigationDuration / 1000) % 60;
+  int minutes = (int) ((irrigationDuration / (1000*60)) % 60);
+
+   // Send water level state
+  serverSerial.print("wl: ");
+  serverSerial.print(waterLevelState);
+
+  // Send pump status
+  serverSerial.print(", is: ");
   serverSerial.print(pumpState);
 
-  // Send water level state
-  serverSerial.print(", wl: ");
-  serverSerial.print(waterLevelState);
+  // Send irrigation duration
+  serverSerial.print(", id: ");
+  serverSerial.print(minutes + ":" + seconds);
+
+  // Log water level state to local terminal
+  Serial.print("water_level: ");
+  Serial.println(waterLevelState);
 
   // Log pump status to local terminal
   Serial.print("irrigation_status: ");
   Serial.print(pumpState);
 
-  // Log water level state to local terminal
-  Serial.print(", water_level: ");
-  Serial.println(waterLevelState);
+  // Log irrigation duration to local terminal
+  Serial.print("irrigation_duration: ");
+  Serial.println(minutes + ":" + seconds);
 }
