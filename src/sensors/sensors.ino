@@ -24,7 +24,7 @@ const uint8_t waterLevel_low   = 1;
 const uint8_t waterLevel_mid   = 2;
 const uint8_t waterLevel_high  = 3;
 
-
+// Time to track time between when water pump is tunnered on/off
 unsigned long previousIrrigationTime = 0;
 
 /**
@@ -112,9 +112,9 @@ void loop() {
 
       int waterLevelState = getWaterLevel();
       int waterPumpState =  getPumpStatus();
-      unsigned long irrigationToggleDuration = getToggleDuration();
+      unsigned long irrigationToggleDuration = getPumpToggleDuration();
 
-      sendWaterStatus(waterLevelState, waterPumpState, irrigationDuration);
+      sendWaterStatus(waterLevelState, waterPumpState, irrigationToggleDuration);
 
     }
   }
@@ -244,7 +244,7 @@ int toggleWaterPump(int waterLevel) {
 
   digitalWrite(waterPumpRelayPin, setPumpState);
 
-  // pump state toggled, set irrigation time
+  // pump state toggled, set new irrigation time
   previousIrrigationTime = millis();
 
   Serial.print("water_pump: ");
@@ -273,8 +273,9 @@ unsigned long getPumpToggleDuration() {
  * wl: x, is: x, id: x
  */
 void sendWaterStatus(int waterLevelState, int pumpState, unsigned long irrigationDuration) {
-  int seconds = (int) (irrigationDuration / 1000) % 60;
-  int minutes = (int) ((irrigationDuration / (1000*60)) % 60);
+  int seconds = (int) ((irrigationDuration / 1000) % 60);
+  int minutes = (int) (((irrigationDuration / 1000) / 60) % 60);
+  int hours = (int) ((((irrigationDuration / 1000) / 60) / 24) % 24);
 
    // Send water level state
   serverSerial.print("wl: ");
@@ -286,7 +287,10 @@ void sendWaterStatus(int waterLevelState, int pumpState, unsigned long irrigatio
 
   // Send irrigation duration
   serverSerial.print(", id: ");
-  serverSerial.print(minutes + ":" + seconds);
+
+  char serverbuf[9];
+  sprintf(serverbuf, "%02d:%02d:%02d", hours, minutes, seconds);
+  serverSerial.println(serverbuf);
 
   // Log water level state to local terminal
   Serial.print("water_level: ");
@@ -294,9 +298,12 @@ void sendWaterStatus(int waterLevelState, int pumpState, unsigned long irrigatio
 
   // Log pump status to local terminal
   Serial.print("irrigation_status: ");
-  Serial.print(pumpState);
+  Serial.println(pumpState);
 
   // Log irrigation duration to local terminal
   Serial.print("irrigation_duration: ");
-  Serial.println(minutes + ":" + seconds);
+
+  char localbuf[9];
+  sprintf(localbuf, "%02d:%02d:%02d", hours, minutes, seconds);
+  Serial.println(localbuf);
 }

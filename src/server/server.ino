@@ -356,7 +356,7 @@ void responseIrrigate(String sensorMessage) {
   uint8_t responseCode;
 
   // water_level_status: x, irrigation_status: x, irrigation_duration: x
-  // wl: x, is: x, id: x
+  // wl: x, is: x, id: xx:xx:xx
   waterLevelStatus = sensorMessage.substring(4, 5);
   waterLevelStatus.trim();
 
@@ -366,7 +366,7 @@ void responseIrrigate(String sensorMessage) {
   irrigationStatus.trim();
   irrigationStatus = irrigationStatus == "1" ? "on" : "off";
 
-  irrigationDuration = sensorMessage.substring(18);
+  irrigationDuration = sensorMessage.substring(18, 26);
   irrigationDuration.trim();
   irrigationDuration = irrigationDuration.toInt() >= 0 ? irrigationDuration : "ERROR";
 
@@ -394,5 +394,11 @@ void responseIrrigate(String sensorMessage) {
  * in the request
  */
 void handleNotFound() {
-  server.send(response_NOT_FOUND , "application/json", "{\n  status: Not Found\n}");
+  String buf;
+  DynamicJsonDocument doc(64);
+
+  doc["url"]["ok"] = false;
+
+  serializeJson(doc, buf);
+  server.send(response_NOT_FOUND , "application/json", buf);
 }
