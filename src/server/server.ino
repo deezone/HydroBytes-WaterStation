@@ -40,6 +40,9 @@
 const char *ssid = APSSID;
 const char *password = APPSK;
 
+const String server_VERSION = "v0.2.1";
+const String server_RESEASE = "25 October 2020";
+
 const uint8_t response_OK = 200;
 const uint8_t response_NOT_FOUND = 404;
 const uint8_t response_UNAVAILABLE = 503;
@@ -77,9 +80,9 @@ void setup() {
   // Connect to local serial port. Used to send messages to sensor controller
   Serial.begin(9600);
 
-  Serial.println("");
   Serial.println("HydroBites Water Station - Server");
-  Serial.println("v0.2.0");
+  Serial.println(server_VERSION);
+  Serial.println(server_RESEASE);
   Serial.println("");
 
   Serial.println("Configuring access point...");
@@ -120,14 +123,21 @@ void loop() {
   while (Serial.available()) {
     sensorMessage = Serial.readStringUntil('\n');
 
-    if (sensorMessage.indexOf("serial_status:") >= 0) {
+    // serial_status
+    if (sensorMessage.indexOf("ss:") >= 0) {
       responseStatus(sensorMessage);
-    } else if (sensorMessage.indexOf("led_status:") >= 0) {
+
+    // led_status
+    } else if (sensorMessage.indexOf("ls:") >= 0) {
       responseLedStatus(sensorMessage);
-    } else if (sensorMessage.indexOf("water_level:") >= 0) {
-      responseWaterLevel(sensorMessage);
-    } else if (sensorMessage.indexOf("irrigation_status:") >= 0) {
+
+    // irrigation_status
+    } else if (sensorMessage.indexOf("is:") >= 0) {
       responseIrrigate(sensorMessage);
+
+    // water_level
+    } else if (sensorMessage.indexOf("wl:") >= 0) {
+      responseWaterLevel(sensorMessage);
     }
   }
 
@@ -143,15 +153,16 @@ void loop() {
  */
 void handleRoot() {
   String buf;
+  DynamicJsonDocument doc(512);
 
   // Write to serial channel to inform Ardunio (Uno) of event
   Serial.println("GET /");
 
-  DynamicJsonDocument doc(512);
+  // Compose response
   doc["hydrobytes-water-station"] = "ok";
 
-  doc["release"]["version"] = "v0.2.0";
-  doc["release"]["date"] = "18 October 2020";
+  doc["release"]["version"] = server_VERSION;
+  doc["release"]["date"] = server_RESEASE;
 
   doc["paths"]["/"] = "Welcome";
   doc["paths"]["/status"] = "Current state of subsystem";
@@ -161,6 +172,7 @@ void handleRoot() {
   doc["paths"]["/water/irrigate"] = "Toggle irrigation on/off";
 
   serializeJson(doc, buf);
+
   server.send(response_OK, F("application/json"), buf);
 }
 
@@ -180,22 +192,29 @@ void responseStatus(String sensorMessage) {
   String sensorStatus;
   String buf;
   DynamicJsonDocument doc(128);
-  int responseCode = response_OK;
+  uint8_t responseCode = response_OK;
 
-  // serial_status: x
-  serialStatus = sensorMessage.substring(15, 19);
+  // sr: x, ss: x
+  // serial_status: x, sensor_status: x
+  serialStatus = sensorMessage.substring(4, 5);
   serialStatus.trim();
-  sensorStatus = sensorMessage.substring(36, 41);
+  serialStatus = serialStatus == "1" ? "true" : "false";
+
+  sensorStatus = sensorMessage.substring(11, 12);
+
+  Serial.println("responseStatus() sensorStatus preTrim(): ->" + sensorStatus + "<-");
   sensorStatus.trim();
+  sensorStatus = sensorStatus == "1" ? "true" : "false";
 
-  doc["status"]["two-way-serial-communication"] = serialStatus;
-  doc["status"]["water-sensors"] = sensorStatus;
-
+  // Compose response
   if (serialStatus != "true" || sensorStatus != "true") {
     responseCode = response_UNAVAILABLE;
   }
 
+  doc["status"]["two-way-serial-communication"] = serialStatus;
+  doc["status"]["water-sensors"] = sensorStatus;
   serializeJson(doc, buf);
+
   server.send(responseCode, F("application/json"), buf);
 }
 
@@ -221,15 +240,15 @@ void responseLedStatus(String sensorMessage) {
   String responseBody;
   String buf;
   DynamicJsonDocument doc(64);
-  int responseCode;
+  uint8_t responseCode;
 
+  // ls: x
   // led_status: x
-  ledStatus = sensorMessage.substring(12, 17);
+  ledStatus = sensorMessage.substring(4, 5);
   ledStatus.trim();
+  ledStatus = ledStatus == "1" ? "true" : "false";
 
-  doc["status"]["led"] = ledStatus;
-
-  // Send response
+  // Compose response
   if (ledStatus == "true" || ledStatus == "false") {
     Serial.print("led_status: ");
     Serial.println(response_OK);
@@ -240,7 +259,9 @@ void responseLedStatus(String sensorMessage) {
     responseCode = response_UNAVAILABLE;
   }
 
+  doc["status"]["led"] = ledStatus;
   serializeJson(doc, buf);
+
   server.send(responseCode, F("application/json"), buf);
 }
 
@@ -259,17 +280,17 @@ void responseWaterLevel(String sensorMessage) {
   String buf;
   DynamicJsonDocument doc(64);
   String responseBody;
-  int responseCode;
+  uint8_t responseCode;
 
+  // wl: x
   // water_level: x
-  waterLevelStatus = sensorMessage.substring(13, 19);
+  waterLevelStatus = sensorMessage.substring(4, 5);
   waterLevelStatus.trim();
+  waterLevelStatus = getWaterLevelMessage(waterLevelStatus);
 
-  doc["water"]["level"] = waterLevelStatus;
-
-  // Send response
+  // Compose response
   Serial.println("water_level: ");
-  if (waterLevelStatus == "empty" || waterLevelStatus == "low" || waterLevelStatus == "midway" || waterLevelStatus == "full") {
+  if (waterLevelStatus == "empty" || waterLevelStatus == "low" || waterLevelStatus == "mid" || waterLevelStatus == "full") {
     Serial.println(response_OK);
     responseCode = response_OK;
   } else {
@@ -277,8 +298,42 @@ void responseWaterLevel(String sensorMessage) {
     responseCode = response_UNAVAILABLE;
   }
 
+  doc["water"]["level"] = waterLevelStatus;
+
   serializeJson(doc, buf);
   server.send(responseCode, F("application/json"), buf);
+}
+
+String getWaterLevelMessage(String waterLevelStatus) {
+  // Check for error status
+  if (waterLevelStatus == "-") {
+    return "ERROR";
+  }
+
+  int waterLevel = waterLevelStatus.toInt();
+
+  switch (waterLevel) {
+    case 0:
+      waterLevelStatus = "empty";
+      break;
+
+    case 1:
+      waterLevelStatus = "low";
+      break;
+
+    case 2:
+      waterLevelStatus = "mid";
+      break;
+
+    case 3:
+      waterLevelStatus = "full";
+      break;
+
+    default:
+      waterLevelStatus = "ERROR";
+  }
+
+  return waterLevelStatus;
 }
 
 /**
@@ -292,27 +347,43 @@ void requestIrrigateToggle() {
  * Water irrigation status response
  */
 void responseIrrigate(String sensorMessage) {
+  String waterLevelStatus;
   String irrigationStatus;
+  String irrigationDuration;
   String buf;
-  DynamicJsonDocument doc(64);
+  DynamicJsonDocument doc(128);
   String responseBody;
-  int responseCode;
+  uint8_t responseCode;
 
-  // irrigation_status: x
-  irrigationStatus = sensorMessage.substring(19, 24);
+  // water_level_status: x, irrigation_status: x, irrigation_duration: x
+  // wl: x, is: x, id: xx:xx:xx
+  waterLevelStatus = sensorMessage.substring(4, 5);
+  waterLevelStatus.trim();
+
+  waterLevelStatus = getWaterLevelMessage(waterLevelStatus);
+      
+  irrigationStatus = sensorMessage.substring(11, 12);
   irrigationStatus.trim();
+  irrigationStatus = irrigationStatus == "1" ? "on" : "off";
 
-  doc["water"]["irrigation"] = irrigationStatus;
+  irrigationDuration = sensorMessage.substring(18, 26);
+  irrigationDuration.trim();
+  irrigationDuration = irrigationDuration.toInt() >= 0 ? irrigationDuration : "ERROR";
 
-  // Send response
-  Serial.println("irrigation_status: ");
-  if (irrigationStatus == "on" || irrigationStatus == "off") {
+  // Compose response code
+  Serial.print("irrigation_status: ");
+  if (waterLevelStatus != "ERROR" && irrigationDuration != "ERROR") {
     Serial.println(response_OK);
     responseCode = response_OK;
   } else {
     Serial.println(response_UNAVAILABLE);
     responseCode = response_UNAVAILABLE;
   }
+
+  // Compose response
+  doc["water"]["level"] = waterLevelStatus;
+  doc["water"]["irrigation"]["status"] = irrigationStatus;
+  doc["water"]["irrigation"]["duration"] = irrigationDuration;
 
   serializeJson(doc, buf);
   server.send(responseCode, F("application/json"), buf);
@@ -323,5 +394,11 @@ void responseIrrigate(String sensorMessage) {
  * in the request
  */
 void handleNotFound() {
-  server.send(response_NOT_FOUND , "application/json", "{\n  status: Not Found\n}");
+  String buf;
+  DynamicJsonDocument doc(64);
+
+  doc["url"]["ok"] = false;
+
+  serializeJson(doc, buf);
+  server.send(response_NOT_FOUND , "application/json", buf);
 }
