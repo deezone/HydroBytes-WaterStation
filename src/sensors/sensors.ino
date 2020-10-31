@@ -1,7 +1,9 @@
 #include <SoftwareSerial.h>
 
-const String server_VERSION = "v0.2.1";
-const String server_RELEASE = "25 October 2020";
+const String server_VERSION = "v0.2.2";
+const String server_RELEASE = "31 October 2020";
+
+const bool DEBUG = false;
 
 // initialize pins
 const uint8_t waterSensorLowLedPin  = 2;
@@ -104,9 +106,8 @@ void loop() {
 
       int waterLevelState = getWaterLevel();
       int waterPumpState = toggleWaterPump(waterLevelState);
-      unsigned long irrigationDuration = getPumpToggleDuration();
 
-      sendWaterStatus(waterLevelState, waterPumpState, irrigationDuration);
+      sendWaterStatus(waterLevelState, waterPumpState);
 
     } else if (serverMessage.indexOf("GET /water") >= 0) {
 
@@ -114,7 +115,8 @@ void loop() {
       int waterPumpState =  getPumpStatus();
       unsigned long irrigationToggleDuration = getPumpToggleDuration();
 
-      sendWaterStatus(waterLevelState, waterPumpState, irrigationToggleDuration);
+      sendWaterStatus(waterLevelState, waterPumpState);
+      sendIrrigationDuration(irrigationToggleDuration);
 
     }
   }
@@ -187,38 +189,45 @@ int getWaterLevel() {
   bool sensorCheckOk = false;
   int waterLevel = 0;
 
+  // Reset water level LEDs
+  digitalWrite(waterSensorLowLedPin, LOW);
+  digitalWrite(waterSensorMidLedPin, LOW);
+  digitalWrite(waterSensorHighLedPin, LOW);
+
   // Digital: 1/0
   waterSensorLowStatus  = digitalRead(waterSensorLowPin);
   waterSensorMidStatus  = digitalRead(waterSensorMidPin);
   waterSensorHighStatus = digitalRead(waterSensorHighPin);
 
-  // Set related led to the same on/off state of the water sensor
-  digitalWrite(waterSensorLowLedPin, waterSensorLowStatus);
-  digitalWrite(waterSensorMidLedPin, waterSensorMidStatus);
-  digitalWrite(waterSensorHighLedPin, waterSensorHighStatus);
-
   // Validate sensor readings, a lower sensor should not have an off status
   // High
   if (waterSensorHighStatus == 1 && waterSensorMidStatus == 1 && waterSensorLowStatus == 1) {
+    digitalWrite(waterSensorHighLedPin, HIGH);
     return 3;
   }
 
   // Mid
   if (waterSensorHighStatus == 0 && waterSensorMidStatus == 1 && waterSensorLowStatus == 1) {
+    digitalWrite(waterSensorMidLedPin, HIGH);
     return 2;
   }
 
   // Low
   if (waterSensorHighStatus == 0 && waterSensorMidStatus == 0 && waterSensorLowStatus == 1) {
+    digitalWrite(waterSensorLowLedPin, HIGH);
     return 1;
   }
 
   // Empty
   if (waterSensorHighStatus == 0 && waterSensorMidStatus == 0 && waterSensorLowStatus == 0) {
+    digitalWrite(waterSensorLowLedPin, HIGH);
     return 0;
   }
 
   // Error
+  digitalWrite(waterSensorLowLedPin, HIGH);
+  digitalWrite(waterSensorMidLedPin, HIGH);
+  digitalWrite(waterSensorHighLedPin, HIGH);
   return -1;
 }
 
@@ -234,7 +243,7 @@ int toggleWaterPump(int waterLevel) {
   }
 
   // Do not run pump if water level is low
-  if (waterLevel <= waterLevel_mid) {
+  if (!DEBUG && waterLevel <= waterLevel_low) {
     return 0;
   }
 
@@ -270,27 +279,17 @@ unsigned long getPumpToggleDuration() {
 /**
  * Send Serial message back to server of current irrigation (water pump) state
  *
- * wl: x, is: x, id: x
+ * wl: x, ps: x
  */
-void sendWaterStatus(int waterLevelState, int pumpState, unsigned long irrigationDuration) {
-  int seconds = (int) ((irrigationDuration / 1000) % 60);
-  int minutes = (int) (((irrigationDuration / 1000) / 60) % 60);
-  int hours = (int) ((((irrigationDuration / 1000) / 60) / 24) % 24);
+void sendWaterStatus(int waterLevelState, int pumpState) {
 
    // Send water level state
   serverSerial.print("wl: ");
   serverSerial.print(waterLevelState);
 
   // Send pump status
-  serverSerial.print(", is: ");
+  serverSerial.print(", ps: ");
   serverSerial.print(pumpState);
-
-  // Send irrigation duration
-  serverSerial.print(", id: ");
-
-  char serverbuf[9];
-  sprintf(serverbuf, "%02d:%02d:%02d", hours, minutes, seconds);
-  serverSerial.println(serverbuf);
 
   // Log water level state to local terminal
   Serial.print("water_level: ");
@@ -299,11 +298,26 @@ void sendWaterStatus(int waterLevelState, int pumpState, unsigned long irrigatio
   // Log pump status to local terminal
   Serial.print("irrigation_status: ");
   Serial.println(pumpState);
+}
+
+/**
+ * Send Serial message back to server of irrigation (water pump) running duration since last toggle
+ *
+ * id: xx:xx:xx
+ */
+void sendIrrigationDuration(unsigned long irrigationDuration) {
+  int seconds = (int) ((irrigationDuration / 1000) % 60);
+  int minutes = (int) (((irrigationDuration / 1000) / 60) % 60);
+  int hours = (int) ((((irrigationDuration / 1000) / 60) / 24) % 24);
+
+  // Send irrigation duration
+  serverSerial.print(", id: ");
+
+  char irrigationDurationBuf[9];
+  sprintf(irrigationDurationBuf, "%02d:%02d:%02d", hours, minutes, seconds);
+  serverSerial.println(irrigationDurationBuf);
 
   // Log irrigation duration to local terminal
   Serial.print("irrigation_duration: ");
-
-  char localbuf[9];
-  sprintf(localbuf, "%02d:%02d:%02d", hours, minutes, seconds);
-  Serial.println(localbuf);
+  Serial.println(irrigationDurationBuf);
 }
