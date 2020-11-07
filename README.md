@@ -1,5 +1,5 @@
 # HydroBytes-WaterManagement
-A collection of systems using micro controllers to manage water in an automated garden.
+A collection of systems using micro controllers to manage water in an automated garden. The Water Management system is a part of a larger automated garden project called "[HydroBytes](https://github.com/deezone/HydroBytes)".
 
 ## Introduction
 
@@ -21,14 +21,16 @@ The "garden" is simply a backyard patio in Brooklyn, New York. Typically there a
 This repo is for the Water Management systems of the project. It's responsibilities are:
 - adding water to a water reservoir (rain barrel)
 - monitor the water level in the water reservoir
-- pumping water to the garden. Sensor systems in the garden will coordinate with the Water Management system based on the conditions
+- irrigate the garden. Sensor systems in the garden will coordinate with the [Base Station](https://github.com/deezone/HydroBytes-BaseStation) to determine when the Water Station should irrigate and for how long.
 - provide access and control of the subsystems through REST API requests
-- send status and related readings to the Central System
+- send status and related readings to the [Base Station](https://github.com/deezone/HydroBytes-BaseStation)
 
 
 ### Release Notes
 Resources and thoughts on each release. Development details as well as links to help explain choices made in how the system was built.
 
+- [v0.2.2 - 14 November 2020](https://github.com/deezone/HydroBytes-waterManagement/blob/master/resources/releases/v00-02-02.md)
+Adds duration support to indicate how long an irriagtion has been running or how long it's been since the last irrigation.
 - [v0.2.1 - 24 October 2020](https://github.com/deezone/HydroBytes-waterManagement/blob/master/resources/releases/v00-02-01.md)
 Adds duration  GET /water responses to indicate the amount of time since the water pump state has been toggled.
 - [v0.2.0 - 18 October 2020](https://github.com/deezone/HydroBytes-waterManagement/blob/master/resources/releases/v00-02-00.md)
