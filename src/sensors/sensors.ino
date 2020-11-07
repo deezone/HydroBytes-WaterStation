@@ -1,7 +1,7 @@
 #include <SoftwareSerial.h>
 
 const String server_VERSION = "v0.2.2";
-const String server_RELEASE = "31 October 2020";
+const String server_RELEASE = "14 November 2020";
 
 const bool DEBUG = false;
 
@@ -303,18 +303,20 @@ void sendWaterStatus(int waterLevelState, int pumpState) {
 /**
  * Send Serial message back to server of irrigation (water pump) running duration since last toggle
  *
- * id: xx:xx:xx
+ * days:hours:minutes:seconds
+ * id: xxx:xx:xx:xx
  */
 void sendIrrigationDuration(unsigned long irrigationDuration) {
   int seconds = (int) ((irrigationDuration / 1000) % 60);
   int minutes = (int) (((irrigationDuration / 1000) / 60) % 60);
   int hours = (int) ((((irrigationDuration / 1000) / 60) / 24) % 24);
+  int days = = round(((irrigationDuration / 1000) / 60) / 24);
 
   // Send irrigation duration
   serverSerial.print(", id: ");
 
-  char irrigationDurationBuf[9];
-  sprintf(irrigationDurationBuf, "%02d:%02d:%02d", hours, minutes, seconds);
+  char irrigationDurationBuf[13];
+  sprintf(irrigationDurationBuf, "%03d:%02d:%02d:%02d", days, hours, minutes, seconds);
   serverSerial.println(irrigationDurationBuf);
 
   // Log irrigation duration to local terminal
