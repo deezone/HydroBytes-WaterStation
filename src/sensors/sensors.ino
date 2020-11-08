@@ -310,7 +310,7 @@ void sendIrrigationDuration(unsigned long irrigationDuration) {
   int seconds = (int) ((irrigationDuration / 1000) % 60);
   int minutes = (int) (((irrigationDuration / 1000) / 60) % 60);
   int hours = (int) ((((irrigationDuration / 1000) / 60) / 24) % 24);
-  int days = = round(((irrigationDuration / 1000) / 60) / 24);
+  int days = round(((irrigationDuration / 1000) / 60) / 24);
 
   // Send irrigation duration
   serverSerial.print(", id: ");

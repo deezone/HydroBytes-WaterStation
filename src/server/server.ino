@@ -301,7 +301,8 @@ void responseWaterLevel(String sensorMessage) {
   pumpStatus.trim();
   pumpStatus = pumpStatus == "1" ? "on" : "off";
 
-  toggleSinceDuration = sensorMessage.substring(18, 26);
+  // xxx:xx:xx:xx
+  toggleSinceDuration = sensorMessage.substring(18, 30);
   toggleSinceDuration.trim();
   toggleSinceDuration = toggleSinceDuration.toInt() >= 0 ? toggleSinceDuration : "ERROR";
 
