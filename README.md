@@ -1,5 +1,5 @@
-# HydroBytes-WaterManagement
-A collection of systems using micro controllers to manage water in an automated garden. The Water Management system is a part of a larger automated garden project called "[HydroBytes](https://github.com/deezone/HydroBytes)".
+# HydroBytes-WaterManagementStation
+A collection of systems using micro controllers to manage water in an automated garden. The Water Management Station system is a part of a larger automated garden project called "[HydroBytes](https://github.com/deezone/HydroBytes)".
 
 ## Introduction
 
@@ -7,8 +7,9 @@ The "garden" is simply a backyard patio in Brooklyn, New York. Typically there a
 
 - **Water Management**
 - **[Base Station](https://github.com/deezone/HydroBytes-BaseStation)**
+- **[Plant Station](https://github.com/deezone/HydroBytes-PlantStation)**
 
-![Garden Layout](https://raw.githubusercontent.com/deezone/HydroBytes-waterManagement/master/resources/HydroBytes-38-74-Garden.jpg)
+![brooklyn-20201115 garden layout](https://raw.githubusercontent.com/deezone/HydroBytes/master/resources/gardenBrooklynDiagram-20201115.jpg)
 
 ![Garden](https://github.com/deezone/HydroBytes-WaterManagement/blob/master/resources/garden-01.png)
 
