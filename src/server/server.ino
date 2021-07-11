@@ -40,8 +40,8 @@
 const char *ssid = APSSID;
 const char *password = APPSK;
 
-const String server_VERSION = "v0.2.1";
-const String server_RESEASE = "25 October 2020";
+const String server_VERSION = "v0.3.0";
+const String server_RESEASE = "15 May 2021";
 
 const uint8_t response_OK = 200;
 const uint8_t response_NOT_FOUND = 404;
@@ -56,7 +56,7 @@ ESP8266WebServer server(80);
 void setup() {
   // Wait for serial port to be available
   // Include a delay in the routine. That would allow background tasks that need to run. You can not have long blocking
-  // code with the ESP8266. It will cause the behavior you see:
+  // code with the ESP8266. It will cause the behavior:
 
   // Uno (sensors) - received from ESP-01 (server):
   // 21:40:37.136 ->  ets Jan  8 2013,rst cause:2, boot mode:(3,7)
@@ -95,9 +95,11 @@ void setup() {
   Serial.println("");
 
   IPAddress stationIP = WiFi.softAPIP();
-  Serial.println("AP (station) IP address: " + stationIP);
+  Serial.print("AP (station) IP address: ");
+  Serial.println(stationIP);
 
-  Serial.println("Local IP address: " + WiFi.localIP());
+  Serial.print("Local IP address: ");
+  Serial.println(WiFi.localIP());
   Serial.flush();
 
   // server routers
@@ -131,13 +133,13 @@ void loop() {
     } else if (sensorMessage.indexOf("ls:") >= 0) {
       responseLedStatus(sensorMessage);
 
-    // irrigation_status
-    } else if (sensorMessage.indexOf("is:") >= 0) {
-      responseIrrigate(sensorMessage);
-
-    // water_level
-    } else if (sensorMessage.indexOf("wl:") >= 0) {
+    // water_status (wl: x, ps: x, id: xx:xx:xx)
+    } else if (sensorMessage.indexOf("id:") >= 0) {
       responseWaterLevel(sensorMessage);
+
+    // irrigation_status (wl: x, ps: x)
+    } else if (sensorMessage.indexOf("wl:") >= 0) {
+      responseIrrigate(sensorMessage);
     }
   }
 
@@ -165,7 +167,7 @@ void handleRoot() {
   doc["release"]["date"] = server_RESEASE;
 
   doc["paths"]["/"] = "Welcome";
-  doc["paths"]["/status"] = "Current state of subsystem";
+  doc["paths"]["/status"] = "Current health of subsystems";
   doc["paths"]["/led"] = "Current state of LED - on/off";
   doc["paths"]["/led/toggle"] = "Toggle LED on/off";
   doc["paths"]["/water"] = "Current water status";
@@ -186,47 +188,55 @@ void requestStatus() {
 /**
  * Status request response. Returns http response to server http request based on
  * status reponse from sensor controller.
+ *
+ * Go to http://192.168.4.1/status
  */
 void responseStatus(String sensorMessage) {
   String serialStatus;
   String sensorStatus;
+  String clockStatus;
   String buf;
-  DynamicJsonDocument doc(128);
+  DynamicJsonDocument doc(256);
   uint8_t responseCode = response_OK;
 
-  // sr: x, ss: x
-  // serial_status: x, sensor_status: x
+  // sr: x, ss: x, cs: x
+  // serial_status: x, sensor_status: x, clock_status: x
   serialStatus = sensorMessage.substring(4, 5);
   serialStatus.trim();
   serialStatus = serialStatus == "1" ? "true" : "false";
 
   sensorStatus = sensorMessage.substring(11, 12);
-
-  Serial.println("responseStatus() sensorStatus preTrim(): ->" + sensorStatus + "<-");
   sensorStatus.trim();
   sensorStatus = sensorStatus == "1" ? "true" : "false";
 
+    // Serial.println("responseStatus() sensorStatus preTrim(): ->" + sensorStatus + "<-");
+
+  clockStatus = sensorMessage.substring(17, 18);
+  clockStatus.trim();
+  clockStatus = clockStatus == "1" ? "true" : "false";
+
   // Compose response
-  if (serialStatus != "true" || sensorStatus != "true") {
+  if (serialStatus != "true" || sensorStatus != "true" || clockStatus != "true") {
     responseCode = response_UNAVAILABLE;
   }
 
   doc["status"]["two-way-serial-communication"] = serialStatus;
   doc["status"]["water-sensors"] = sensorStatus;
+  doc["status"]["real-time-clock"] = clockStatus;
   serializeJson(doc, buf);
 
   server.send(responseCode, F("application/json"), buf);
 }
 
 /**
- * LED status request controller
+ * LED status serial request to sensor micro controller
  */
 void requestLedStatus() {
   Serial.println("GET /led");
 }
 
 /**
- * LED toggle request controller
+ * LED toggle serial request to sensor micro controller
  */
 void requestLedToggle() {
   Serial.println("GET /led/toggle");
@@ -234,6 +244,8 @@ void requestLedToggle() {
 
 /**
  * Led status response
+ *
+ * Go to http://192.168.4.1/led
  */
 void responseLedStatus(String sensorMessage) {
   String ledStatus;
@@ -266,7 +278,7 @@ void responseLedStatus(String sensorMessage) {
 }
 
 /**
- * Water level status request controller
+ * Water level serial status request to sensor micro controller
  */
 void requestWaterLevel() {
   Serial.println("GET /water");
@@ -274,11 +286,16 @@ void requestWaterLevel() {
 
 /**
  * Water level response
+ * wl: x, ps: x, id: xx:xx:xx
+ *
+ * Go to http://192.168.4.1/water
  */
 void responseWaterLevel(String sensorMessage) {
   String waterLevelStatus;
+  String pumpStatus;
+  String toggleSinceDuration;
   String buf;
-  DynamicJsonDocument doc(64);
+  DynamicJsonDocument doc(128);
   String responseBody;
   uint8_t responseCode;
 
@@ -288,22 +305,39 @@ void responseWaterLevel(String sensorMessage) {
   waterLevelStatus.trim();
   waterLevelStatus = getWaterLevelMessage(waterLevelStatus);
 
+  pumpStatus = sensorMessage.substring(11, 12);
+  pumpStatus.trim();
+  pumpStatus = pumpStatus == "1" ? "on" : "off";
+
+  // xxx:xx:xx:xx
+  toggleSinceDuration = sensorMessage.substring(18, 30);
+  toggleSinceDuration.trim();
+  toggleSinceDuration = toggleSinceDuration.toInt() >= 0 ? toggleSinceDuration : "ERROR";
+
   // Compose response
   Serial.println("water_level: ");
   if (waterLevelStatus == "empty" || waterLevelStatus == "low" || waterLevelStatus == "mid" || waterLevelStatus == "full") {
     Serial.println(response_OK);
     responseCode = response_OK;
+
+    doc["water"]["level"] = waterLevelStatus;
+    doc["water"]["irrigation"]["status"] = pumpStatus;
+    doc["water"]["irrigation"]["since"] = toggleSinceDuration;
+
   } else {
     Serial.println(response_UNAVAILABLE);
     responseCode = response_UNAVAILABLE;
-  }
 
-  doc["water"]["level"] = waterLevelStatus;
+    doc["water"]["status"] = "ERROR";
+  }
 
   serializeJson(doc, buf);
   server.send(responseCode, F("application/json"), buf);
 }
 
+/**
+ * Convert sensor reading to user readable string for water level
+ */
 String getWaterLevelMessage(String waterLevelStatus) {
   // Check for error status
   if (waterLevelStatus == "-") {
@@ -337,7 +371,7 @@ String getWaterLevelMessage(String waterLevelStatus) {
 }
 
 /**
- * Water pump toggle request controller
+ * Water pump toggle serial request to sensor micro controller
  */
 void requestIrrigateToggle() {
   Serial.println("GET /water/irrigate");
@@ -345,45 +379,44 @@ void requestIrrigateToggle() {
 
 /**
  * Water irrigation status response
+ *
+ * sensorMessage: wl: x, is: x
+ * serial log: water_level_status: xxx, irrigation_status: xxx
+ *
+ * Go to http://192.168.4.1/water/irrigate
  */
 void responseIrrigate(String sensorMessage) {
   String waterLevelStatus;
   String irrigationStatus;
-  String irrigationDuration;
   String buf;
   DynamicJsonDocument doc(128);
   String responseBody;
   uint8_t responseCode;
 
-  // water_level_status: x, irrigation_status: x, irrigation_duration: x
-  // wl: x, is: x, id: xx:xx:xx
   waterLevelStatus = sensorMessage.substring(4, 5);
   waterLevelStatus.trim();
-
   waterLevelStatus = getWaterLevelMessage(waterLevelStatus);
       
   irrigationStatus = sensorMessage.substring(11, 12);
   irrigationStatus.trim();
   irrigationStatus = irrigationStatus == "1" ? "on" : "off";
 
-  irrigationDuration = sensorMessage.substring(18, 26);
-  irrigationDuration.trim();
-  irrigationDuration = irrigationDuration.toInt() >= 0 ? irrigationDuration : "ERROR";
-
   // Compose response code
   Serial.print("irrigation_status: ");
-  if (waterLevelStatus != "ERROR" && irrigationDuration != "ERROR") {
+  if (waterLevelStatus != "ERROR") {
     Serial.println(response_OK);
     responseCode = response_OK;
+
+    // Compose response
+    doc["water"]["level"] = waterLevelStatus;
+    doc["water"]["irrigation"]["status"] = irrigationStatus;
+
   } else {
     Serial.println(response_UNAVAILABLE);
     responseCode = response_UNAVAILABLE;
-  }
 
-  // Compose response
-  doc["water"]["level"] = waterLevelStatus;
-  doc["water"]["irrigation"]["status"] = irrigationStatus;
-  doc["water"]["irrigation"]["duration"] = irrigationDuration;
+    doc["water"]["status"] = "ERROR";
+  }
 
   serializeJson(doc, buf);
   server.send(responseCode, F("application/json"), buf);
